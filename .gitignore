@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
-abhaengigkeiten/pakete/
+# FLIRC-Paket: Lizenz unklar, darf nicht ins oeffentliche Repository (bleibt lokal
+# im Offline-Cache und in den Backup-Zips; install.sh laedt es sonst vom Hersteller).
+abhaengigkeiten/pakete/flirc/
 abhaengigkeiten/pakete.neu/
 geraetestand/

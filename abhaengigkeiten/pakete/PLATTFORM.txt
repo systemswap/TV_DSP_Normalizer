@@ -1,0 +1,7 @@
+Gebaut am 29.09.2026 17:38
+System : Debian GNU/Linux 12 (bookworm) (aarch64)
+Python : Python 3.11.2
+Die Python-Pakete mit C-Anteil (numpy, onnxruntime, lxml, pyalsaaudio,
+RPi.GPIO, spidev, ...) passen nur zu genau dieser Python-Version und
+Architektur. Auf einem neueren System faellt install.sh automatisch auf
+die Installation aus dem Internet zurueck (gleiche Versionen).

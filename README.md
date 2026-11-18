@@ -222,7 +222,9 @@ beide Toslink-Buchsen und die LED, Lüftungsschlitze und ein einrastender Deckel
 - **Sicher beim Start:** CamillaDSP startet immer leise (−35 dB). Erst wenn die Kette steht und geprüft
   ist, stellt die Box Ihren Pegel wieder her. Startet CamillaDSP neu, merkt sie das und stellt alles
   von selbst wieder her.
-- **Feste Versionen:** Alle Fremdpakete laufen in genau den Versionen, die zusammen getestet sind.
+- **Feste Versionen, offline installierbar:** Alle Fremdpakete laufen in genau den Versionen, die
+  zusammen getestet sind. Sie liegen im Repository (`abhaengigkeiten/pakete/`), Lizenzen und
+  Quellcode-Hinweise in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 | Mehr dazu | |
 |---|---|
@@ -239,7 +241,11 @@ beide Toslink-Buchsen und die LED, Lüftungsschlitze und ein einrastender Deckel
 ## Datenschutz
 
 Die Box arbeitet vollständig in Ihrem Heimnetz. Es gibt keine Telemetrie, kein Konto und keine Cloud.
-Ins Internet geht sie nur bei der Installation, um die Pakete zu laden.
+Auch die Telemetrie mitgelieferter Bibliotheken ist abgeschaltet (onnxruntime für die
+Spracherkennung). Alle Fremdpakete liegen in genau den getesteten Versionen im Repository. Auf
+Raspberry Pi OS 12 (64 Bit) installiert sich die Box damit ohne Internet, nur der optionale
+FLIRC-Treiber kommt vom Hersteller. Auf anderen Systemen lädt `install.sh` dieselben Versionen aus
+dem Internet.
 
 ## Lizenz
 

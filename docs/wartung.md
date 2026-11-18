@@ -14,7 +14,8 @@ wie man es sicher aktualisiert. Hintergründe und Messungen stehen in
 | **DSP-Profil der HiFiBerry DAC+ DSP** | `dsp/dspdac-noautomute.xml` | ja | ja |
 | Sprachmodell (Silero VAD) | `backend/silero_vad.onnx` | ja | ja |
 | Feste Versionen der Fremdsoftware | `abhaengigkeiten/requirements*.txt` | ja | ja |
-| Fremdsoftware selbst (offline) | `abhaengigkeiten/pakete/` | nein | ja |
+| Fremdsoftware selbst (offline) | `abhaengigkeiten/pakete/` | ja, außer FLIRC (Lizenz unklar, `pakete/flirc/` bleibt lokal) | ja |
+| Quellcode von CamillaDSP (GPL) | `abhaengigkeiten/quellcode/` | ja | ja |
 | Einstellungen des Geräts, FLIRC-Tasten | `/opt/tvdsp/config/`, FLIRC-Stick | nein | ja (`geraetestand/`) |
 | Debian-Systempakete (ffmpeg, Python …) | apt | nein | nein – kommen aus Raspberry Pi OS 12 „bookworm“ |
 
@@ -69,8 +70,12 @@ liegen – ohne Internet. Die Python-Pakete passen nur zu dem System, das in
 3. **Am Pi installieren und testen:** `sudo ./install.sh`, danach Ton, Decke,
    Regelung, Fernbedienung und Weboberfläche prüfen,
    `werkzeuge/apitest.py` und `werkzeuge/funktest.py` laufen lassen.
-4. **Erst dann veröffentlichen:** `werkzeuge/release.sh` – die Zip enthält
-   damit die neuen Pakete.
+4. **Erst dann veröffentlichen:** `werkzeuge/release.sh` – Commit und Zip
+   enthalten damit die neuen Pakete. Vorher bei jedem neuen oder geänderten
+   Paket Lizenz und Datenschutzhinweise prüfen, den Lizenztext unter
+   `licenses/pakete/` und den Eintrag in `THIRD-PARTY-NOTICES.md` nachziehen;
+   bei einer neuen CamillaDSP-Version auch den Quellcode unter
+   `abhaengigkeiten/quellcode/` ersetzen.
 
 **Nie eine Version ändern, ohne Schritt 2.** Sonst lägen in der Zip andere
 Pakete als in der Liste steht. Das ist technisch abgesichert: Die Offline-

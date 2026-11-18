@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# install.sh - TV-Dynamikprozessor 3.3.9 einrichten
+# install.sh - TV-Dynamikprozessor 3.3.10 einrichten
 #
 #   Hardware:  Raspberry Pi 4 + HiFiBerry DAC+ DSP
 #   System:    Raspberry Pi OS 64 Bit (mit Desktop)
@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-VERSION=3.3.9
+VERSION=3.3.10
 CDSP_VERSION=v4.1.3     # geprueft, siehe README
 HBDSP_VERSION=0.21      # auf PyPI sind alle Versionen zurueckgezogen,
                         # deshalb muss die Version fest angegeben werden
@@ -548,6 +548,8 @@ User=$RUN_USER
 Environment=HTTP_PORT=$HTTP_PORT
 Environment=CDSP_PORT=$CDSP_PORT
 Environment=STATE_DIR=$PREFIX/config
+# Keine Nutzungsdaten von onnxruntime an den Hersteller (Spracherkennung)
+Environment=ORT_DISABLE_TELEMETRY=1
 Environment=HOME=$(getent passwd "$RUN_USER" | cut -d: -f6)
 WorkingDirectory=$PREFIX/backend
 ExecStart=$VENV/bin/python3 app.py

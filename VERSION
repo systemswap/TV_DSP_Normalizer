@@ -1,4 +1,21 @@
-3.3.9
+3.3.10
+
+## 3.3.10 — Offline-Pakete im Repository, Telemetrie von onnxruntime aus
+
+- Alle Fremdpakete fuer die Installation (CamillaDSP 4.1.3, Python-Pakete
+  in den getesteten Versionen) liegen jetzt in abhaengigkeiten/pakete/ im
+  Repository: install.sh richtet die Anlage auf Raspberry Pi OS 12 (64 Bit)
+  ohne Internet ein. Ausnahme: das FLIRC-Programm (Lizenz unklar), es kommt
+  weiter vom Hersteller. Lizenztexte der Pakete unter licenses/pakete/,
+  Quellcode von CamillaDSP unter abhaengigkeiten/quellcode/.
+- Datenschutz: onnxruntime (optionale Spracherkennung) sendet ab Werk auch
+  unter Linux Nutzungsdaten an den Hersteller. Abgeschaltet mit
+  ORT_DISABLE_TELEMETRY=1 in app.py, in der Unit tvdsp-web und in
+  werkzeuge/abhaengigkeiten.sh (Fehlergedaechtnis Nr. 22). install.sh noetig,
+  damit die Unit den Schalter bekommt.
+- werkzeuge/abhaengigkeiten.sh: kein Rechnername mehr in PLATTFORM.txt;
+  flirc/ steht nicht in den Pruefsummen, damit ein Klon ohne FLIRC die
+  Pruefung besteht.
 
 ## 3.3.9 — Erste öffentliche Fassung
 

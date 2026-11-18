@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # TVDSP - Fremdpakete fuer die Offline-Installation zusammenstellen.
 #
-# Legt unter abhaengigkeiten/pakete/ (NICHT in git, aber in jeder Backup-Zip)
-# genau die Versionen ab, mit denen die Anlage laeuft:
+# Legt unter abhaengigkeiten/pakete/ (in git und in jeder Backup-Zip; flirc/
+# nur lokal, Lizenz unklar) genau die Versionen ab, mit denen die Anlage laeuft:
 #
 #   python/*.whl                  alle Python-Pakete aus requirements*.txt
 #                                 (+ pip und wheel), fuer diese Plattform gebaut
 #   camilladsp/...tar.gz          CamillaDSP-Release (Version aus install.sh)
 #   flirc/*.deb                   FLIRC-Programm + libhidapi-hidraw0
-#   SHA256SUMS                    Pruefsummen aller Dateien
+#   SHA256SUMS                    Pruefsummen aller Dateien ausser flirc/
 #   PLATTFORM.txt                 fuer welches System die Pakete gebaut sind
 #
 # install.sh benutzt diese Dateien automatisch, wenn sie neben ihm liegen,
@@ -16,6 +16,8 @@
 #
 # Aufruf: werkzeuge/abhaengigkeiten.sh   (baut den Cache komplett neu)
 set -euo pipefail
+# Auch die Probe-Installation laedt onnxruntime: keine Nutzungsdaten an den Hersteller.
+export ORT_DISABLE_TELEMETRY=1
 
 EIGENER_ORT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 REPO="$(dirname "$EIGENER_ORT")"
@@ -82,7 +84,7 @@ echo "== FLIRC ..."
 
 . /etc/os-release
 cat > "$NEU/PLATTFORM.txt" <<INFO
-Gebaut am $(date '+%d.%m.%Y %H:%M') auf $(hostname)
+Gebaut am $(date '+%d.%m.%Y %H:%M')
 System : ${PRETTY_NAME} ($(uname -m))
 Python : $("$VENV_PY" --version 2>&1)
 Die Python-Pakete mit C-Anteil (numpy, onnxruntime, lxml, pyalsaaudio,
@@ -95,7 +97,9 @@ INFO
 mkdir -p "$NEU/gebaut-aus"
 cp "$A/requirements.txt" "$A/requirements-vad.txt" "$NEU/gebaut-aus/"
 printf 'CDSP_VERSION=%s\nFLIRC_VERSION=%s\n' "$CDSP_VERSION" "$FLIRC_VERSION" > "$NEU/gebaut-aus/versionen.txt"
-( cd "$NEU" && find . -type f ! -name SHA256SUMS -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS )
+# flirc/ bleibt ausserhalb der Pruefsummen: Es liegt nur lokal (Lizenz unklar, nicht im
+# oeffentlichen Repository), ein Klon ohne flirc/ muss die Pruefung trotzdem bestehen.
+( cd "$NEU" && find . -type f ! -name SHA256SUMS ! -path './flirc/*' -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS )
 
 rm -rf "$P"; mv "$NEU" "$P"
 gruen "Fertig: $P  ($(du -sh "$P" | cut -f1))"

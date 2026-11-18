@@ -441,3 +441,32 @@ Hintergründe zur Soundkarte: [hifiberry-dsp.md](hifiberry-dsp.md).
 - **Nicht tun:** Annehmen, dass Umschalten allein den Takt einrastet.
 - **Im Code:** `bin/tvdsp-quelle.py` (`takt_setzen`, `lauf`).
 - **Abgesichert durch:** Neustart am Gerät; kein automatischer Test (Hardware nötig).
+
+## Nr. 22 – Datenschutz: onnxruntime hätte Nutzungsdaten an den Hersteller gesendet
+
+- **Entdeckt:** Version 3.3.9 (Commit `c7fdf3d`), beim Prüfen der Lizenzen für die Offline-Pakete
+- **Behoben:** Version 3.3.10
+- **Wie bemerkt:** Die `Privacy.md` im onnxruntime-Paket nennt Telemetrie, die in den
+  offiziellen Builds auch unter Linux standardmäßig eingeschaltet ist; in der Bibliothek für den
+  Pi stehen die Zieladresse beim Hersteller und der Schalter `ORT_DISABLE_TELEMETRY`.
+- **Was passiert ist:** Mit eingeschalteter Spracherkennung (Band-Reiter) lädt das Backend
+  onnxruntime. Das legt dann eine dauerhafte Geräte-ID und eine Warteschlange für
+  Nutzungsdaten unter `~/.cache/Microsoft/DeveloperTools/.onnxruntime/` an und lädt sie
+  gebündelt hoch.
+- **Wo aufgetreten:** Spracherkennung (optional, Standard aus), Probe-Installation in
+  `werkzeuge/abhaengigkeiten.sh`.
+- **Warum:** onnxruntime 1.30 hat die Telemetrie in den offiziellen Paketen ab Werk an.
+- **Lösung:** `ORT_DISABLE_TELEMETRY=1` an drei Stellen: in `backend/app.py`, bevor onnxruntime
+  geladen wird, zusätzlich in der Unit `tvdsp-web` (`install.sh`) und in
+  `werkzeuge/abhaengigkeiten.sh`.
+- **Warum diese Lösung:** Der Schalter verhindert laut Hersteller Uploader, Ereignisse und
+  Geräte-ID für den ganzen Prozess. Nachgemessen mit demselben Paket am PC: ohne Schalter
+  entstehen `deviceid` und `onnxruntime.db`, mit Schalter nichts. Die API-Abschaltung
+  (`disable_telemetry_events`) wirkt erst nach dem Laden und hätte ein erstes Ereignis
+  durchgelassen.
+- **Nicht tun:** onnxruntime oder ein anderes Paket aufnehmen oder aktualisieren, ohne dessen
+  Datenschutzhinweise zu lesen und die Telemetrie im Projekt selbst abzuschalten.
+- **Im Code:** `backend/app.py` (Kopf), `install.sh` (Unit `tvdsp-web`),
+  `werkzeuge/abhaengigkeiten.sh`.
+- **Abgesichert durch:** Messung wie oben (Dateien unter `~/.cache/Microsoft` vorher/nachher);
+  kein automatischer Test.

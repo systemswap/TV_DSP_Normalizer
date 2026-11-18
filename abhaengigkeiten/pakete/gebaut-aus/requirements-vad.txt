@@ -1,0 +1,7 @@
+# TVDSP - Spracherkennung (Silero VAD, optional). Fehlt sie, meldet der
+# Band-Zweig "nicht verfuegbar"; die Regelung selbst laeuft weiter.
+onnxruntime==1.30.0
+numpy==2.4.6
+flatbuffers==25.12.19
+packaging==26.3
+protobuf==7.36.2

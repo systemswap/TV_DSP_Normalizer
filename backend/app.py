@@ -42,12 +42,17 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
 
+# onnxruntime (Spracherkennung) sendet in den offiziellen Builds auch unter
+# Linux Nutzungsdaten an den Hersteller, wenn man es nicht abschaltet. Muss
+# gesetzt sein, bevor onnxruntime geladen wird (siehe install.sh, Unit tvdsp-web).
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
+
 try:
     from camilladsp import CamillaClient
 except ImportError:                      # aeltere Paketversion
     from camilladsp import CamillaConnection as CamillaClient
 
-VERSION = "3.3.9"
+VERSION = "3.3.10"
 
 CDSP_HOST = os.environ.get("CDSP_HOST", "127.0.0.1")
 CDSP_PORT = int(os.environ.get("CDSP_PORT", "1234"))
