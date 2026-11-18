@@ -67,12 +67,20 @@ TV_DSP_Normalizer macht damit Schluss:
 
 ## Was die Box kann
 
-### Das Band: die Regelung
+### So fließt der Ton
 
-```text
-Fernseher ─Toslink─▶ Vorpegel ─▶ Leveler (Aux1) ─▶ 16-Band-EQ ─▶ Loudness-Kompensation
-                                                               ─▶ Decke (30 ms Vorlauf) ─▶ Pegel ─▶ Limiter −2 dBFS ─▶ Cinch
-```
+<p align="center">
+  <img src="docs/bilder/readme/prozessfluss.svg" width="100%" alt="Prozessfluss: Der Fernseher liefert auf dem Standardweg PCM 2.0 über Toslink an die HiFiBerry DAC+ DSP. Optional liefert er über den miniDSP MCHStreamer PCM 2.0, Dolby Digital 2.0, Dolby Digital 5.1 oder DTS. Die Box erkennt das Format, gibt 2.0 unverändert weiter und mischt 5.1 frei einstellbar auf Stereo. Beide Wege laufen als Stereo in dieselbe Kette im Raspberry Pi: Leveler, 16-Band-EQ, Loudness-Kompensation, Decke mit 30 ms Vorlauf, Höhendämpfung, Pegel, Limiter. Ausgang ist immer Stereo L/R über Cinch. Bedient wird über Handy und TV-Fernbedienung.">
+</p>
+
+**Was Sie sehen:** Links steht der Fernseher mit seinen zwei möglichen Einstellungen. Auf dem
+**Standardweg** (Tonausgang „PCM“) mischt der Fernseher 5.1 selbst auf Stereo und schickt es an die
+HiFiBerry. **Mit dem MCHStreamer** (Tonausgang „Auto/Bitstream“) bekommt die Box den Originalton:
+Stereo und Dolby 2.0 laufen unverändert weiter, 5.1 wird nach Ihren Vorgaben heruntergemischt.
+Ab dem grünen Kreis ist alles gleich: Stereo läuft durch die sieben Stufen im Raspberry Pi und
+kommt über Cinch an Ihre Lautsprecher. Handy und Fernbedienung steuern die Box.
+
+### Das Band: die Regelung
 
 Gemessen wird die Lautheit nach **EBU R128** (Momentary 400 ms, Short-Term 3 s). Daraus regelt die Box:
 
@@ -158,6 +166,12 @@ Surround und Subwoofer-Kanal im Stereoton landen. Ohne ihn übernimmt das der Fe
 ---
 
 ## Aufbau und Installation
+
+<p align="center">
+  <img src="docs/bilder/readme/aufbau.svg" width="100%" alt="Aufbauplan: Toslink vom optischen Ausgang des Fernsehers zur HiFiBerry DAC+ DSP auf dem Raspberry Pi 4, Cinch L/R zu den Aktivboxen, USB-C-Netzteil. Optional FLIRC-Empfänger am USB-Port für die TV-Fernbedienung und miniDSP MCHStreamer per USB, an den dann das Toslink-Kabel statt an die HiFiBerry kommt. Bedienung per Handy über WLAN.">
+</p>
+
+<sub>Bauteile schematisch gezeichnet.</sub>
 
 1. **Raspberry Pi OS (64 Bit, Bookworm)** auf die microSD-Karte schreiben, die HiFiBerry DAC+ DSP
    aufstecken und den Pi ins Heimnetz bringen.
