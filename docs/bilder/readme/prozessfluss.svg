@@ -16,6 +16,7 @@
 <marker id="spitze-ffffff" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ffffff"/></marker>
 <marker id="spitze-d64545" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d64545"/></marker>
 <marker id="spitze-f2f2f2" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f2f2f2"/></marker>
+<marker id="spitze-10221d" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#10221d"/></marker>
 </defs>
 <rect width="2000" height="1180" rx="22" fill="url(#bg)"/>
 <text x="60" y="78.0" fill="#ffffff" font-size="44" font-weight="700" text-anchor="start" >So fließt der Ton</text>

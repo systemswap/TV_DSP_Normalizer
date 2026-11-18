@@ -141,6 +141,10 @@ Ohne Zusatzgerät gibt der Fernseher Stereo (PCM) aus und mischt 5.1 selbst heru
 
 #### Warum ein eigener Downmix Dialoge so viel verständlicher macht
 
+<p align="center">
+  <img src="docs/bilder/readme/downmix.svg" width="100%" alt="Vergleich zweier Downmixe von 5.1 auf Stereo. Links der übliche Fernseh-Downmix „Neutral“: Front je 41,4 %, Center 29,3 %, Surround 29,3 %, Tiefton aus – Stimme und Raumklang gleich laut. Rechts die Voreinstellung „Sprache“: Center 50 %, Front 20 %, Tiefton 15 %, Surround 15 % – die Stimme liegt 10,5 dB über dem Raumklang. Danach läuft das Stereo durch die Band-Regelung.">
+</p>
+
 In einer 5.1-Mischung hat jeder Kanal seine Aufgabe. Die **Stimmen** liegen in fast allen Filmen und
 Serien im **Center**. **Musik, Effekte und Atmosphäre** verteilen sich auf Front links/rechts, die
 beiden **Surround**-Kanäle und den Tieftonkanal (**LFE**). Mischt der Fernseher das auf Stereo

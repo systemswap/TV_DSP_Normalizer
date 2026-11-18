@@ -3,8 +3,8 @@
 
     python3 docs/bilder/readme/schemata.py
 
-Erzeugt prozessfluss.svg (Weg des Tons vom Fernseher bis zu den Lautsprechern)
-und aufbau.svg (Verkabelung der Bauteile) neben diesem Skript. Alle Bauteile
+Erzeugt prozessfluss.svg (Weg des Tons vom Fernseher bis zu den Lautsprechern),
+aufbau.svg (Verkabelung der Bauteile) und downmix.svg (5.1 auf Stereo) neben diesem Skript. Alle Bauteile
 sind selbst gezeichnet; Farben wie banner.svg.
 """
 import os
@@ -69,7 +69,7 @@ class Svg:
                 '<stop offset="1" stop-color="#9aa3ad"/></linearGradient>',
                 '<linearGradient id="gehaeuse" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6675"/>'
                 '<stop offset="1" stop-color="#3a434f"/></linearGradient>']
-        for f in (GRUEN, ORANGE, GELB, BLAU, TEXT3, TOSLINK, "#ffffff", "#d64545", "#f2f2f2"):
+        for f in (GRUEN, ORANGE, GELB, BLAU, TEXT3, TOSLINK, "#ffffff", "#d64545", "#f2f2f2", "#10221d"):
             kopf.append(f'<marker id="spitze-{f[1:]}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" '
                         f'markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{f}"/></marker>')
         kopf.append('</defs>')
@@ -386,6 +386,102 @@ def aufbau():
     s.speichern("aufbau.svg")
 
 
+# ------------------------------------------------------------- Downmix
+
+MIX = {   # gleiche Werte wie MIX_VOREINSTELLUNGEN in backend/app.py und bin/tvdsp-quelle.py
+    "neutral": {"front": 0.414, "center": 0.293, "lfe": 0.0, "surround": 0.293},
+    "kino": {"front": 0.258, "center": 0.323, "lfe": 0.274, "surround": 0.145},
+    "sprache": {"front": 0.200, "center": 0.500, "lfe": 0.150, "surround": 0.150},
+}
+ROLLE = {"front": ("Musik, Effekte", BLAU), "center": ("Stimmen", GRUEN),
+         "lfe": ("Tiefbass", ORANGE), "surround": ("Raumklang", GELB)}
+
+
+def box_lautsprecher(s, x, y, w=1.0, text=""):
+    s.add(f'<rect x="{x}" y="{y}" width="{70 * w}" height="{110 * w}" rx="{9 * w}" fill="#1a1e24" stroke="#5c6672" stroke-width="2.5"/>')
+    s.add(f'<circle cx="{x + 35 * w}" cy="{y + 26 * w}" r="{11 * w}" fill="#2b313a" stroke="#68727f" stroke-width="2"/>')
+    s.add(f'<circle cx="{x + 35 * w}" cy="{y + 72 * w}" r="{24 * w}" fill="#2b313a" stroke="#68727f" stroke-width="2"/>')
+    if text:
+        s.text(x + 35 * w, y + 140 * w, text, 22, TEXT, 700, "middle")
+
+
+def downmix_tafel(s, x0, y0, b, h, name, titel, untertitel, betonung):
+    mix = MIX[name]
+    hervor = GRUEN if betonung else RAND
+    s.karte(x0, y0, b, h, hervor, "#1d2a2c" if betonung else KARTE, 20, True, 2.5 if betonung else 2)
+    s.text(x0 + 32, y0 + 52, titel, 28, TEXT, 700)
+    s.text(x0 + 32, y0 + 84, untertitel, 17, TEXT3)
+    import math
+    c, r = mix["center"], mix["surround"]
+    abstand = 20 * math.log10(c / r)
+    zahl = "0" if abs(abstand) < 0.05 else f"{abstand:+.1f}".replace(".", ",")
+    s.chip(x0 + b - 330, y0 + 34, f"Stimme ggü. Raumklang: {zahl} dB",
+           GRUEN if betonung else TEXT3, 17, 300)
+    kanaele = [("FL", "Front links", "front", "L"), ("C", "Center", "center", "LR"),
+               ("FR", "Front rechts", "front", "R"), ("LFE", "Tiefton", "lfe", "LR"),
+               ("SL", "Surround links", "surround", "L"), ("SR", "Surround rechts", "surround", "R")]
+    kx, ox = x0 + 230, x0 + b - 170
+    oy = {"L": y0 + 200, "R": y0 + 410}
+    for i, (kurz, lang, art, ziel) in enumerate(kanaele):
+        ky = y0 + 140 + i * 70
+        anteil = mix[art]
+        rolle, farbe = ROLLE[art]
+        for z in ziel:
+            ty = oy[z] + 55 + (-14 if art == "front" else 14 if art == "surround" else 0)
+            if anteil > 0:
+                breite = max(2.5, anteil * 64)
+                s.add(f'<path d="M{kx + 30},{ky} C{kx + 200},{ky} {ox - 190},{ty} {ox - 12},{ty}" fill="none" '
+                      f'stroke="{farbe}" stroke-opacity="0.75" stroke-width="{breite:.1f}" stroke-linecap="round"/>')
+            else:
+                s.add(f'<path d="M{kx + 30},{ky} C{kx + 200},{ky} {ox - 190},{ty} {ox - 12},{ty}" fill="none" '
+                      f'stroke="{TEXT3}" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="4 8"/>')
+        s.add(f'<circle cx="{kx}" cy="{ky}" r="27" fill="#141a22" stroke="{farbe}" stroke-width="3"/>')
+        s.text(kx, ky + 7, kurz, 17 if len(kurz) < 3 else 15, TEXT, 700, "middle")
+        s.text(x0 + 32, ky - 4, lang, 18, TEXT, 600)
+        s.text(x0 + 32, ky + 20, rolle, 15, farbe)
+        pz = "aus" if anteil == 0 else f"{anteil * 100:.1f} %".replace(".", ",")
+        s.text(kx + 40, ky - 14, pz, 15, farbe if anteil else TEXT3, 700)
+    for z in "LR":
+        box_lautsprecher(s, ox, oy[z], 1.0, "")
+        s.text(ox + 92, oy[z] + 64, z, 30, TEXT, 800)
+    # Zusammensetzung einer Stereoseite
+    by, bx, bb = y0 + h - 118, x0 + 32, b - 64
+    s.text(bx, by - 14, "So setzt sich jede Stereoseite zusammen", 16, TEXT3)
+    xx = bx
+    for art in ("center", "front", "lfe", "surround"):
+        anteil = mix[art]
+        if anteil <= 0:
+            continue
+        rolle, farbe = ROLLE[art]
+        w = bb * anteil
+        s.add(f'<rect x="{xx:.1f}" y="{by}" width="{w - 3:.1f}" height="34" rx="6" fill="{farbe}" fill-opacity="0.85"/>')
+        if w > 90:
+            s.text(xx + w / 2, by + 23, f"{rolle} {anteil * 100:.0f} %", 15, "#10161d", 700, "middle")
+        else:
+            s.text(xx + w / 2, by + 23, f"{anteil * 100:.0f} %", 15, "#10161d", 700, "middle")
+        xx += w
+    s.text(bx, by + 66, "Die Anteile ergeben immer 100 % – der Mix kann nicht übersteuern.", 14, TEXT3)
+
+
+def downmix():
+    s = Svg(2000, 960)
+    s.text(60, 78, "5.1 auf Stereo – mit Ihrem eigenen Downmix", 44, TEXT, 700)
+    s.text(60, 118, "Mehr Center heißt: Die Stimme steht schon vorne, bevor die Regelung eingreift – Raumklang "
+                    "und Effekte sind bereits leiser.", 21, TEXT3)
+    downmix_tafel(s, 40, 160, 940, 700, "neutral", "Üblicher Fernseh-Downmix",
+                  "„Neutral“ – die Stimme muss sich durchsetzen", False)
+    downmix_tafel(s, 1020, 160, 940, 700, "sprache", "Voreinstellung „Sprache“",
+                  "Center bekommt die Hälfte – Dialoge klar im Vordergrund", True)
+    s.add(f'<circle cx="1000" cy="510" r="30" fill="{GRUEN}" filter="url(#schatten)"/>')
+    s.pfeil("M986,510 L1010,510", "#10221d", 6)
+    s.text(60, 908, "Danach läuft das Stereo durch die Band-Regelung: Weil die Stimme den größten Anteil hat, hält "
+                    "das Band vor allem die Dialoge gleichmäßig – Effekte laufen leiser mit.", 18, TEXT2)
+    s.text(60, 936, "Weitere Voreinstellung „Kino“ (Standard): Stimme +7 dB gegenüber Raumklang, mit vollem Bass. "
+                    "Alle Regler frei einstellbar im Reiter Mix.", 16, TEXT3)
+    s.speichern("downmix.svg")
+
+
 if __name__ == "__main__":
     prozessfluss()
     aufbau()
+    downmix()
