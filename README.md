@@ -236,9 +236,10 @@ beide Toslink-Buchsen und die LED, Lüftungsschlitze und ein einrastender Deckel
 - **Sicher beim Start:** CamillaDSP startet immer leise (−35 dB). Erst wenn die Kette steht und geprüft
   ist, stellt die Box Ihren Pegel wieder her. Startet CamillaDSP neu, merkt sie das und stellt alles
   von selbst wieder her.
-- **Feste Versionen, offline installierbar:** Alle Fremdpakete laufen in genau den Versionen, die
-  zusammen getestet sind. Sie liegen im Repository (`abhaengigkeiten/pakete/`), Lizenzen und
-  Quellcode-Hinweise in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+- **Feste Versionen:** CamillaDSP und alle Python-Pakete liegen in genau den getesteten Versionen
+  im Repository (`abhaengigkeiten/pakete/`). Die Installation bleibt damit gleich, auch wenn sich im
+  Netz etwas ändert oder ein Paket verschwindet. Lizenzen und Quellcode-Hinweise stehen in
+  [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 | Mehr dazu | |
 |---|---|
@@ -256,10 +257,10 @@ beide Toslink-Buchsen und die LED, Lüftungsschlitze und ein einrastender Deckel
 
 Die Box arbeitet vollständig in Ihrem Heimnetz. Es gibt keine Telemetrie, kein Konto und keine Cloud.
 Auch die Telemetrie mitgelieferter Bibliotheken ist abgeschaltet (onnxruntime für die
-Spracherkennung). Alle Fremdpakete liegen in genau den getesteten Versionen im Repository. Auf
-Raspberry Pi OS 12 (64 Bit) installiert sich die Box damit ohne Internet, nur der optionale
-FLIRC-Treiber kommt vom Hersteller. Auf anderen Systemen lädt `install.sh` dieselben Versionen aus
-dem Internet.
+Spracherkennung). Ins Internet geht die Box nur bei der Installation: Die Systempakete (ffmpeg,
+Python, Build-Werkzeuge) kommen von Raspberry Pi OS, der optionale FLIRC-Treiber vom Hersteller.
+CamillaDSP und alle Python-Pakete nimmt `install.sh` aus dem Repository. Passt das System nicht
+(anderes Betriebssystem oder andere Python-Version), lädt es dieselben Versionen aus dem Internet.
 
 ## Lizenz
 

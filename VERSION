@@ -4,9 +4,9 @@
 
 - Alle Fremdpakete fuer die Installation (CamillaDSP 4.1.3, Python-Pakete
   in den getesteten Versionen) liegen jetzt in abhaengigkeiten/pakete/ im
-  Repository: install.sh richtet die Anlage auf Raspberry Pi OS 12 (64 Bit)
-  ohne Internet ein. Ausnahme: das FLIRC-Programm (Lizenz unklar), es kommt
-  weiter vom Hersteller. Lizenztexte der Pakete unter licenses/pakete/,
+  Repository; install.sh nimmt sie auf Raspberry Pi OS 12 (64 Bit) von dort.
+  Die Systempakete (ffmpeg, Python, Build-Werkzeuge) kommen weiter per apt
+  aus dem Internet, das FLIRC-Programm (Lizenz unklar) vom Hersteller. Lizenztexte der Pakete unter licenses/pakete/,
   Quellcode von CamillaDSP unter abhaengigkeiten/quellcode/.
 - Datenschutz: onnxruntime (optionale Spracherkennung) sendet ab Werk auch
   unter Linux Nutzungsdaten an den Hersteller. Abgeschaltet mit

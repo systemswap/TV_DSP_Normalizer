@@ -12,8 +12,9 @@ folgenden Bestandteilen liegen bei ihren jeweiligen Autoren.
 
 ## Offline-Pakete (`abhaengigkeiten/pakete/`)
 
-Damit sich die Anlage ohne Internet und in genau den getesteten Versionen installieren lässt,
-liegen die Fremdpakete unverändert, so wie von den Projekten veröffentlicht, im Repository. Sie
+Damit sich die Anlage immer in genau den getesteten Versionen installieren lässt, auch wenn sich im
+Netz etwas ändert, liegen die Fremdpakete unverändert, so wie von den Projekten veröffentlicht, im
+Repository. Die Systempakete von Raspberry Pi OS lädt `install.sh` weiterhin per `apt`. Sie
 passen zu Raspberry Pi OS 12 „Bookworm“, 64 Bit, Python 3.11 (`PLATTFORM.txt`); auf anderen
 Systemen lädt `install.sh` dieselben Versionen aus dem Internet. Die Lizenztexte aus den Paketen
 liegen unter `licenses/pakete/<paket>/`.

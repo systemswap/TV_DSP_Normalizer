@@ -51,7 +51,8 @@ Alles läuft in genau den Versionen, die zusammen getestet sind:
 | FLIRC | 3.27.19 | `FLIRC_VERSION` in `bin/install-flirc-cli.sh` |
 
 `install.sh` nimmt die Pakete aus `abhaengigkeiten/pakete/`, wenn sie daneben
-liegen – ohne Internet. Die Python-Pakete passen nur zu dem System, das in
+liegen – dafür ohne Internet. Die Systempakete von Raspberry Pi OS (ffmpeg,
+Python, Build-Werkzeuge) lädt es vorher immer per `apt`. Die Python-Pakete passen nur zu dem System, das in
 `abhaengigkeiten/pakete/PLATTFORM.txt` steht; auf einem anderen System holt
 `install.sh` dieselben Versionen aus dem Internet.
 
