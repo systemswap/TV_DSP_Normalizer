@@ -1,0 +1,51 @@
+3.3.9
+
+## 3.3.9 — Erste öffentliche Fassung
+
+- Funktion unveraendert gegenueber 3.3.8.
+- Mix-Reiter: Die Standard-Voreinstellung heisst jetzt "Kino" (gleiche
+  Werte wie bisher: Front 25,8 %, Center 32,3 %, LFE 27,4 %, Surround
+  14,5 %). Eine gespeicherte Einstellung mit dem alten Namen zeigt der
+  Reiter einmal als "eigen" an, bis die Voreinstellung neu angetippt wird.
+- Lizenz GPL-3.0 (LICENSE), Herkunft der mitgelieferten fremden Dateien in
+  THIRD-PARTY-NOTICES.md, Lizenztexte in licenses/.
+- Neue Doku: docs/hifiberry-dsp.md (Eigenheiten der Karte),
+  docs/FEHLERGEDAECHTNIS.md, docs/Architektur.md, docs/PRUEFUNGEN.md,
+  docs/OFFENE-PUNKTE.md. Gehaeuse fuer den miniDSP MCHStreamer zum
+  Selbstdrucken unter gehaeuse/mchstreamer/.
+- werkzeuge/backup.sh: Der Server der Netzwerkfreigabe steht nicht mehr im
+  Skript, sondern in ~/.config/tvdsp/backup-server oder BACKUP_SERVER.
+
+## Fruehere Versionen (Kurzfassung)
+
+Die Entwicklung bis 3.3.8 fand vor der Veroeffentlichung statt; die
+wichtigsten Stationen:
+
+- 3.3.x — miniDSP MCHStreamer als USB-Empfaenger mit Vorrang (Takt vom
+  Fernseher, asynchron, praktisch fehlerfrei); kaputte Dolby-Frames werden
+  sicher erkannt und durch kurze Stille ersetzt; USB-Weg ohne Aussetzer
+  unter Last (Echtzeit-Prioritaet, Status im Arbeitsspeicher); Ton auch
+  nach dem Neustart des Pi.
+- 3.2.0 — Hoehendaempfung: helle, schrille Stellen (oft Werbung) werden
+  gezielt in den Hoehen gedaempft.
+- 3.0.0 — USB-Eingang mit Dolby Digital 5.1: Decodierung auf dem Pi und
+  frei einstellbarer Downmix im neuen Reiter "Mix"; die Normalisierung
+  wirkt nach dem Mix.
+- 2.9.x — Regelung nur noch ueber das Band; Funktionstest am echten
+  CamillaDSP (werkzeuge/funktest.py).
+- 2.8.x — Fremdsoftware in festen, zusammen getesteten Versionen und
+  offline installierbar; Knacken durch die Profil-Abfrage behoben; weniger
+  Last.
+- 2.7.0 — Pegelregler hinter der Decke: Die Decke greift bei jeder
+  Lautstaerke.
+- 2.0.0 — Nur noch die Band-Regelung (frueher RMS, EBU R128, Modi).
+- 1.10–1.13 — Band-Regelung mit Decke und 30 ms Vorlauf,
+  Loudness-Kompensation, optionale Spracherkennung (Silero VAD),
+  Live-Diagramm.
+- 1.7–1.9 — Fernbedienung ueber FLIRC (direkt aus der Weboberflaeche
+  anlernen), Mitschnitt-Aufnahme, sichere Startlautstaerke.
+- 1.x — Grundaufbau: Raspberry Pi 4 mit HiFiBerry DAC+ DSP, CamillaDSP,
+  Weboberflaeche, 16-Band-EQ, Loesung von Doppelton und Kaltstart-Stille
+  der Karte (docs/hifiberry-dsp.md).
+
+Behobene Fehler mit Ursache und Loesung: docs/FEHLERGEDAECHTNIS.md.

@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+abhaengigkeiten/pakete/
+abhaengigkeiten/pakete.neu/
+geraetestand/

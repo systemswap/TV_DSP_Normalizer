@@ -1,0 +1,2346 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0C0E">
+<meta name="version" content="3.3.9">
+<title>TV-Dynamik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0c0e; --card:#15171b; --card-2:#1c1f24;
+  --line:#23262c; --line-2:#333840;
+  --ink:#e8eaec; --dim:#8a9099; --faint:#5b6169;
+  --acc:#4ade9b; --acc-dim:#2b7d59;
+  --warn:#e8b84b; --peak:#e5644e;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{
+  -webkit-text-size-adjust:100%;
+  width:100%;height:100%;overflow:hidden;background:var(--bg);
+  overscroll-behavior:none;
+}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk",system-ui,sans-serif;
+  font-size:16px;line-height:1.4;
+  width:100%;height:100vh;height:100dvh;min-height:0;overflow:hidden;
+  display:flex;flex-direction:column;
+  overscroll-behavior:none;
+}
+.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+
+header{
+  position:relative;flex:0 0 auto;z-index:20;background:rgba(11,12,14,.94);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+  /* Mindestens 30 px oben: Manche Handy-Browser zeichnen die Seite bis unter
+     die Statusleiste, melden aber keinen Sicherheitsabstand (env = 0) - dann
+     war der Titel halb verdeckt (3.0.0). */
+  padding:max(30px, calc(12px + env(safe-area-inset-top))) 16px 12px;
+}
+.hrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.brand{font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.ver{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:400;
+  letter-spacing:.04em;color:var(--faint);text-transform:none;margin-left:3px}
+.conn{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.06em;color:var(--faint)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.dot.idle{background:var(--warn);box-shadow:0 0 8px rgba(232,184,75,.35)}
+.dot.on{background:var(--acc);box-shadow:0 0 6px var(--acc)}
+.dot.off{background:var(--peak)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 9px;min-width:0;overflow:hidden}
+.stat-k{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.stat-v{font-size:17px;font-weight:500;margin-top:2px;white-space:nowrap}
+.stat.aktiv{border-color:var(--acc-dim);background:rgba(74,222,155,.06)}
+.stat.aktiv .stat-k{color:var(--acc)}
+.stat.tot .stat-v{color:var(--faint)}
+/* Spitze-Label: faerbt sich mit dem OUT-Spitzenpegel. Gelb ab -6 dB,
+   rot ab -2 dB (Limiter-Grenze). So sieht man live die Aussteuerreserve. */
+.stat.hot{border-color:rgba(232,184,75,.55);background:rgba(232,184,75,.07)}
+.stat.hot .stat-k{color:var(--warn)}
+.stat.hot .stat-v{color:var(--warn)}
+.stat.clip{border-color:var(--peak);background:rgba(229,100,78,.1)}
+.stat.clip .stat-k{color:var(--peak)}
+.stat.clip .stat-v{color:var(--peak)}
+
+.meters{display:flex;flex-direction:column;gap:5px}
+.mrow{display:flex;align-items:center;gap:9px}
+.mtag{width:28px;font-size:10px;letter-spacing:.06em;color:var(--faint)}
+.mbar{flex:1;height:6px;background:#0f1113;border-radius:3px;overflow:hidden}
+.mfill{height:100%;width:0;background:var(--acc);border-radius:3px;transition:width .1s linear}
+.mfill.hot{background:var(--warn)}
+.mfill.clip{background:var(--peak)}
+.lrarow{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin:10px 2px 0}
+
+main{
+  flex:1 1 auto;min-height:0;width:100%;max-width:640px;margin:0 auto;
+  padding:16px 16px 24px;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
+}
+.panel{display:none}
+.panel.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.card-t{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:13px}
+
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mode{
+  display:flex;justify-content:center;align-items:center;gap:6px;
+  min-height:66px;padding:10px 6px;background:var(--card-2);
+  border:1px solid var(--line);border-radius:11px;
+  color:var(--ink);font:inherit;font-weight:500;text-align:center;cursor:pointer;width:100%;
+}
+.mode>span{width:100%}
+.mode.on{border-color:var(--acc);background:rgba(74,222,155,.08)}
+.mode.on .mode-n{color:var(--acc)}
+.mode-n{font-size:15px}
+.mode-d{font-size:11px;color:var(--dim);font-weight:400;white-space:nowrap}
+
+.fld{margin-bottom:18px}
+.fld:last-child{margin-bottom:6px}
+.fld-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.fld-n{font-size:15px}
+.fld-v{font-size:14px;color:var(--acc);font-family:"JetBrains Mono",monospace}
+.fld-s{font-size:12.5px;line-height:1.45;color:var(--dim);margin-top:3px}
+.fld-s b{color:var(--ink);font-weight:500}
+.hint{font-size:12.5px;line-height:1.45;color:var(--dim);margin-top:10px}
+.hint b{color:var(--ink);font-weight:500}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;
+  margin:12px 0 0;height:34px;background:transparent;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:#0f1113;border-radius:3px}
+input[type=range]::-moz-range-track{height:6px;background:#0f1113;border-radius:3px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:26px;height:26px;margin-top:-10px;
+  background:var(--ink);border:none;border-radius:50%;
+  box-shadow:0 1px 5px rgba(0,0,0,.5);
+}
+input[type=range]::-moz-range-thumb{
+  width:26px;height:26px;background:var(--ink);border:none;border-radius:50%;
+}
+input[type=range]:focus-visible{outline:2px solid var(--acc);outline-offset:4px}
+
+.seg{display:flex;gap:4px;background:#0f1113;border-radius:10px;padding:4px}
+.seg button{
+  flex:1;min-height:40px;border:none;border-radius:7px;background:transparent;
+  color:var(--dim);font:inherit;font-size:14px;font-weight:500;cursor:pointer;
+}
+.seg button.on{background:var(--card-2);color:var(--ink)}
+
+.sw{display:flex;justify-content:space-between;align-items:center;gap:14px;min-height:48px}
+.sw + .sw{border-top:1px solid var(--line);margin-top:4px;padding-top:4px}
+.sw-n{font-size:15px}
+.sw-s{font-size:12px;line-height:1.45;color:var(--faint)}
+.tog{
+  flex:none;width:50px;height:30px;border-radius:15px;border:1px solid var(--line-2);
+  background:#0f1113;position:relative;cursor:pointer;padding:0;
+}
+.tog::after{
+  content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;
+  border-radius:50%;background:var(--faint);transition:transform .16s,background .16s;
+}
+.tog.on{background:rgba(74,222,155,.16);border-color:var(--acc-dim)}
+.tog.on::after{transform:translateX(20px);background:var(--acc)}
+
+.eqread{display:flex;justify-content:space-between;align-items:baseline;
+  min-height:20px;margin-bottom:6px;font-size:13px;color:var(--dim)}
+.eqread .mono{color:var(--acc);font-size:14px}
+.eqwrap{position:relative;margin:0 -4px}
+canvas{width:100%;height:250px;display:block;touch-action:none}
+.btnrow{display:flex;gap:8px;margin-top:14px}
+.sel{width:100%;margin-top:6px;padding:9px 10px;border-radius:9px;
+  background:var(--card);color:var(--fg);border:1px solid var(--line);
+  font-size:14px;font-family:inherit}
+.recstat{margin-top:14px;padding:9px 11px;border-radius:9px;background:#141619;
+  border:1px solid var(--line);font-size:13px;color:var(--dim);
+  font-family:'JetBrains Mono',monospace}
+.recstat.on{border-color:var(--peak);color:var(--peak)}
+.reclist{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.recitem{display:flex;align-items:center;gap:8px;padding:8px 10px;
+  border-radius:9px;background:var(--card);border:1px solid var(--line);
+  font-size:12.5px}
+.recitem .rn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;font-family:'JetBrains Mono',monospace}
+.recitem .rsz{color:var(--faint);flex:0 0 auto}
+.recitem a,.recitem button{flex:0 0 auto;padding:5px 9px;border-radius:7px;
+  font-size:12px;border:1px solid var(--line);background:var(--card);
+  color:var(--fg);text-decoration:none;cursor:pointer}
+.recitem a{border-color:var(--acc-dim);color:var(--acc)}
+.irbig{margin-top:12px;padding:14px 12px;border-radius:10px;background:#141619;
+  border:1px solid var(--line);text-align:center;font-family:'JetBrains Mono',monospace;
+  font-size:16px;color:var(--faint);letter-spacing:.02em;line-height:1.4;white-space:pre-wrap}
+.irbig.on{border-color:var(--acc);color:var(--acc)}
+.irbig.ok{border-color:#5fb783;color:#8fd6a8}
+.irbig.err{border-color:rgba(229,100,78,.55);color:#f0a595;font-size:13px;text-align:left}
+.irbig.hold{border-color:var(--peak);color:var(--peak)}
+.irkey{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.irkey:first-of-type{border-top:0}
+.irkey .kn{flex:0 0 84px;font-weight:600}
+.irkey .ks{flex:1;min-width:0;font-size:12.5px;color:var(--dim);font-family:'JetBrains Mono',monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.irkey .ks.ok{color:#8fd6a8}
+.irkey button{flex:0 0 auto;min-height:36px;padding:0 12px;border-radius:8px;font-size:13px;
+  border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+.irkey button.acc{border-color:var(--acc-dim);color:var(--acc)}
+.irkey button.danger{border-color:rgba(229,100,78,.45);color:#f0a595}
+.irkey button:disabled{opacity:.4}
+.irslots{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:12px}
+.irslot{padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:#141619;
+  font-size:12.5px;display:flex;flex-direction:column;gap:5px}
+.irslot.ok{border-color:#3f7a56}
+.irslot .sn{font-weight:600}
+.irslot .sh{font-family:'JetBrains Mono',monospace;color:var(--dim);font-size:11px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.irslot .sb{display:flex;gap:6px}
+.irslot button{flex:1;min-height:30px;border-radius:7px;font-size:12px;border:1px solid var(--line);
+  background:var(--card);color:var(--fg);cursor:pointer}
+.irslot button.acc{border-color:var(--acc-dim);color:var(--acc)}
+.irslot button.danger{border-color:rgba(229,100,78,.45);color:#f0a595;flex:0 0 34px}
+.irslot button:disabled{opacity:.4}
+.irprog{margin-top:10px;height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:none}
+.irprog.on{display:block}
+.irprog i{display:block;height:100%;background:var(--acc);width:0;transition:width .25s linear}
+.irphase{margin-top:8px;font-size:12.5px;color:var(--acc);display:flex;justify-content:space-between;gap:10px}
+.irphase .el{color:var(--faint);font-family:'JetBrains Mono',monospace}
+.irkonsole{margin-top:8px;max-height:150px;overflow-y:auto;padding:8px 10px;border-radius:8px;
+  background:#0d0f11;border:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11.5px;
+  color:var(--dim);line-height:1.45;display:none;white-space:pre-wrap;word-break:break-all}
+.irkonsole.on{display:block}
+.irkonsole .t{color:var(--faint);margin-right:8px}
+.irkonsole .ok{color:#8fd6a8}
+.irkonsole .err{color:#f0a595}
+.irkonsole .cmd{color:var(--acc)}
+.scanlog{margin-top:12px;display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto}
+.scanrow{display:flex;gap:8px;align-items:baseline;padding:6px 9px;border-radius:7px;
+  background:var(--card);border:1px solid var(--line);font-size:12px;font-family:'JetBrains Mono',monospace}
+.scanrow .sc{color:var(--fg);flex:0 0 auto;min-width:90px}
+.scanrow .sv{flex:0 0 auto;min-width:78px}
+.scanrow .sv.down{color:var(--acc)}
+.scanrow .sv.hold{color:var(--peak)}
+.scanrow .sv.up{color:var(--faint)}
+.scanrow .sd{color:var(--faint);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.btn{
+  flex:1;min-height:46px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card-2);color:var(--ink);font:inherit;font-size:14px;cursor:pointer;
+}
+.btn:active{background:var(--line)}
+.btn.acc{border-color:var(--acc-dim);color:var(--acc)}
+.btn.danger{border-color:rgba(229,100,78,.55);color:#f0a595}
+.btn.danger:active{background:rgba(229,100,78,.12)}
+
+/* Sichtbares Pull-to-refresh: eigener App-Scroller bleibt stabil,
+   aber die Geste bekommt einen nativen aehnlichen Fortschrittsindikator. */
+.ptr-indicator{
+  position:absolute;z-index:80;left:50%;top:calc(env(safe-area-inset-top) + 6px);
+  min-width:46px;height:46px;padding:0 13px;border-radius:23px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:rgba(24,27,31,.98);border:1px solid var(--line-2);
+  box-shadow:0 5px 18px rgba(0,0,0,.38);color:var(--dim);
+  opacity:0;pointer-events:none;
+  transform:translate(-50%,-62px) scale(.88);
+  transition:transform .18s ease,opacity .16s ease,border-color .16s,color .16s;
+  will-change:transform,opacity;
+}
+.ptr-indicator.show{opacity:1}
+.ptr-indicator.ready{color:var(--acc);border-color:var(--acc-dim)}
+.ptr-indicator.loading{opacity:1;color:var(--acc);border-color:var(--acc-dim);
+  transform:translate(-50%,6px) scale(1)}
+.ptr-ico{width:23px;height:23px;flex:none;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;transform-origin:50% 50%;}
+.ptr-indicator.loading .ptr-ico{animation:ptr-spin .72s linear infinite}
+.ptr-txt{display:none;font-size:12px;white-space:nowrap;font-weight:500}
+.ptr-indicator.ready .ptr-txt,.ptr-indicator.loading .ptr-txt{display:block}
+@keyframes ptr-spin{to{transform:rotate(360deg)}}
+
+.bottom-nav-shell{
+  position:relative;flex:0 0 auto;width:100%;z-index:30;
+  background:rgba(11,12,14,.98);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  padding-bottom:0;
+  isolation:isolate;
+}
+nav{
+  position:relative;display:flex;overflow-x:auto;justify-content:flex-start;
+  background:transparent;scrollbar-width:none;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+}
+nav::-webkit-scrollbar{display:none}
+nav button{
+  flex:1 0 84px;min-width:84px;min-height:82px;border:none;background:transparent;
+  color:var(--faint);font:inherit;font-size:15px;letter-spacing:.02em;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+}
+nav button.on{color:var(--acc)}
+nav .ico{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.7}
+.nav-scroll-hint{
+  height:15px;margin:-5px 20px 14px;display:flex;align-items:center;gap:7px;
+  background:transparent;color:var(--faint);font-size:14px;line-height:1;pointer-events:none;
+}
+.nav-scroll-hint .line{height:1px;background:var(--line-2);flex:1}
+
+.diag{background:rgba(232,184,75,.09);border:1px solid rgba(232,184,75,.45);
+  border-radius:12px;padding:14px 16px;margin-bottom:14px}
+/* Pegel-/Clipping-Hinweis nutzt denselben Meldeblock wie die
+   Verbindungsdiagnose. Blickdichter dunkler Vollton, farbiger Rand je Art. */
+.diag.pegel{background:#141619;border-color:rgba(232,184,75,.6)}
+.diag.pegel .diag-t{color:var(--warn)}
+.diag.clip{background:#141619;border-color:var(--peak)}
+.diag.clip .diag-t{color:var(--peak)}
+.diag-t{font-size:15px;font-weight:500;color:var(--warn);margin-bottom:4px}
+.diag-s{font-size:13px;line-height:1.5;color:var(--dim)}
+.diag-c{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink);
+  background:#0f1113;border-radius:6px;padding:7px 9px;margin-top:9px;
+  overflow-x:auto;white-space:nowrap}
+.err{background:rgba(229,100,78,.1);border:1px solid var(--peak);border-radius:10px;
+  padding:11px 14px;margin-bottom:14px;font-size:14px;color:#f0a595}
+.build{font-size:10px;color:#3d434a;text-align:center;margin-top:22px;letter-spacing:.05em}
+.hidden{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="ptrIndicator" class="ptr-indicator" aria-hidden="true">
+  <svg class="ptr-ico" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg>
+  <span id="ptrText" class="ptr-txt">Zum Aktualisieren ziehen</span>
+</div>
+
+<header>
+  <div class="hrow">
+    <span class="brand">TV-Dynamik <span class="ver" id="ver">&nbsp;</span><span class="ver" id="cpu"> · CPU —</span></span>
+    <span class="conn"><span class="dot" id="dot"></span><span id="conn">verbinde</span></span>
+  </div>
+
+  <div class="stats">
+    <div class="stat" id="statM">
+      <div class="stat-k">Eingang M</div>
+      <div class="stat-v mono" id="sM">&mdash;</div>
+    </div>
+    <div class="stat" id="statS">
+      <div class="stat-k">Eingang S</div>
+      <div class="stat-v mono" id="sS">&mdash;</div>
+    </div>
+    <div class="stat" id="statAgc">
+      <div class="stat-k">Gehört</div>
+      <div class="stat-v mono" id="sAgc">&mdash;</div>
+    </div>
+    <div class="stat" id="statPeak">
+      <div class="stat-k">Spitze</div>
+      <div class="stat-v mono" id="sPeak">&mdash;</div>
+    </div>
+  </div>
+
+  <div class="meters">
+    <div class="mrow"><span class="mtag">IN</span><div class="mbar"><div class="mfill" id="mIn"></div></div></div>
+    <div class="mrow"><span class="mtag">OUT</span><div class="mbar"><div class="mfill" id="mOut"></div></div></div>
+  </div>
+  <div class="lrarow">
+    <span>Umfang <span class="mono" id="sLra">&mdash;</span> LU</span>
+    <span>R128 integriert <span class="mono" id="sInt">&mdash;</span></span>
+  </div>
+</header>
+
+<main>
+  <div class="diag hidden" id="diag">
+    <div class="diag-t" id="diagT"></div>
+    <div class="diag-s" id="diagS"></div>
+    <div class="diag-c hidden" id="diagC"></div>
+  </div>
+  <div class="err hidden" id="err"></div>
+
+  <!-- ============ KLANG ============ -->
+  <section class="panel on" id="p-klang">
+    <div class="card">
+      <div class="card-t">Lautstärkeregelung</div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Pegel</span><span class="fld-v" id="v_volume">&mdash;</span></div>
+        <div class="fld-s">Endlautstärke als reine Hauptlautstärke-Dämpfung, 0 dB ist das Maximum. Für mehr Lautstärke den Verstärker/die Anlage aufdrehen — so bleibt der Ausgang digital sauber und läuft nicht in den Limiter.</div>
+        <input type="range" id="volume" min="-60" max="0" step="0.5" value="-35">
+      </div>
+      <div class="sw">
+        <div><div class="sw-n">Stumm</div><div class="sw-s">Lauter/Leiser – am Pegelregler oder per Fernbedienung – hebt Stumm auf.</div></div>
+        <button class="tog" id="t_mute" aria-label="Stumm"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">Automatik</div>
+      <div class="sw">
+        <div>
+          <div class="sw-n">Lautheitsregelung</div>
+          <div class="sw-s">Hält die Lautheit im Band (Reiter „Band“) – über Sender, Werbung und Sendungen hinweg.</div>
+        </div>
+        <button class="tog on" id="t_agc" aria-label="Lautheitsregelung"></button>
+      </div>
+      <div class="sw">
+        <div>
+          <div class="sw-n">Höhen dämpfen</div>
+          <div class="sw-s">Kippt das Verhältnis zu hellen Tönen (z. B. Werbung, Zischlaute, Scheppern), werden die Höhen ab 3 kHz gedämpft – bis 6 dB. <span id="v_hoehen"></span></div>
+        </div>
+        <button class="tog" id="t_hoehen" aria-label="Höhen dämpfen"></button>
+      </div>
+      <div class="sw">
+        <div>
+          <div class="sw-n">Bypass</div>
+          <div class="sw-s">Schaltet Decke, Loudness-Kompensation und Klangkurve ab, hält den Pegel aber gleich (A/B-Vergleich).</div>
+        </div>
+        <button class="tog" id="t_bypass" aria-label="Bypass"></button>
+      </div>
+    </div>
+
+
+
+    <div class="card">
+      <div class="card-t">Lautheit live</div>
+      <div class="seg" id="verlaufFenster"><button data-min="2" class="on">2 min</button><button data-min="10">10 min</button><button data-min="30">30 min</button></div>
+      <div class="seg" id="verlaufSkala" style="margin-top:6px"><button data-s="band">Skala Band</button><button data-s="auto">Auto (Min/Max)</button><button data-s="alles" class="on">Alles −60…0</button></div>
+      <canvas id="verlaufCanvas" width="700" height="240" style="width:100%;height:auto;display:block;margin-top:8px;border-radius:10px;background:var(--card);border:1px solid var(--line)"></canvas>
+      <div class="fld-s" id="verlaufLegende" style="margin-top:8px;line-height:1.7">
+        <span style="color:#e5644e">━━</span> Eingang (Momentary, K-gewichtet) &nbsp;&nbsp;
+        <span style="color:#4ade9b">━━</span> geregelt, wie es rausgeht (Leveler + EQ + Loudness + Decke + Limiter) &nbsp;&nbsp;
+        <span id="verlaufLegendeBand"><span style="background:rgba(74,222,155,.35);padding:0 8px;border-radius:3px">&nbsp;</span> Band (Unter- bis Oberkante) &nbsp;&nbsp;
+        <span style="color:#e5644e">╌╌</span> Decke (Oberkante + 1 dB) &nbsp;&nbsp;
+        <span style="color:#e8b84b">╌╌</span> Rauschsperre (darunter kein Anheben) &nbsp;&nbsp;</span>
+      </div>
+      <div class="hint">Nur im Arbeitsspeicher, nichts wird geschrieben. 2 min in 10 Hz; 10/30 min als 1-s-Kästchen mit Min/Max-Hülle, damit jeder Peak sichtbar bleibt. Der Lautstärkeregler ist herausgerechnet. Skala „Band“ zeigt das Band mit 10 % Rand für Überschreitungen, „Auto“ folgt Min/Max der sichtbaren Werte, „Alles“ ist fest −60…0 dB.</div>
+    </div>
+
+  </section>
+
+  <!-- ============ EQ ============ -->
+  <section class="panel" id="p-eq">
+    <div class="card">
+      <div class="card-t">Klangkurve</div>
+      <div class="eqread">
+        <span id="eqBand">&nbsp;</span>
+        <span class="mono" id="eqVal">&nbsp;</span>
+      </div>
+      <div class="eqwrap"><canvas id="eq"></canvas></div>
+      <div class="hint">Gezeichnet ist der tatsächliche Summenfrequenzgang,
+      nicht eine Linie durch die Reglerwerte. Benachbarte Filter überlagern
+      sich &mdash; der Finger setzt deshalb den Wert der Kurve an den Punkten.
+      Die Reglerwerte werden so berechnet, dass die Kurve zwischen zwei Punkten
+      glatt verläuft und nicht über deren Verbindung hinaus ausbeult.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">Pinselbreite</div>
+      <div class="seg" id="spread">
+        <button data-v="einzeln">Schmal</button>
+        <button data-v="normal" class="on">Normal</button>
+        <button data-v="breit">Breit</button>
+      </div>
+      <div class="hint">Bestimmt, wie weit ein Zug an der Kurve auf die
+      Nachbarbereiche übergreift. <b>Schmal</b> für gezielte Eingriffe, etwa
+      gegen ein dröhnendes Möbelstück. <b>Normal</b> für den Alltag.
+      <b>Breit</b> für Klangcharakter, etwa insgesamt wärmer.</div>
+      <div class="btnrow">
+        <button class="btn" id="eqFlat">Zurücksetzen</button>
+        <button class="btn" id="eqNorm">Ausmitteln</button>
+      </div>
+      <div class="hint"><b>Ausmitteln</b> schiebt die ganze Kurve zurück auf
+      einen Durchschnitt von 0 dB. Nützlich, weil man beim Anheben über die
+      Zeit unbemerkt alles lauter dreht.</div>
+    </div>
+    <div class="card">
+      <div class="card-t">Loudness-Kompensation (Psychoakustik)</div>
+      <div class="hint">Wird eine laute Szene stark abgesenkt, klingt sie fürs Ohr dumpf (Equal-Loudness-Kurven). Ein paralleler Pfad hebt bei Absenkung Tiefen (+6 dB unter 120 Hz) und leicht die Höhen (+2 dB über 6 kHz) an, um −1,4 dB in den Mitten ausgeglichen – <b>lautheitsneutral</b>, das Band bleibt getroffen. Der Anteil folgt der Absenkung mit 2 s Glättung: bei 0 dB nichts, bei 20 dB die volle Kurve. Sitzt <i>nach</i> deinem Lautsprecher-EQ.</div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Kompensation</span><span class="fld-v" id="v_band_ld">an</span></div>
+        <div class="seg" id="bandLdSeg"><button data-v="1">an</button><button data-v="0">aus</button></div>
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Stärke</span><span class="fld-v" id="v_band_ld_st">70 %</span></div>
+        <div class="fld-s">100 % = volle Kurve bei 20 dB Absenkung. Mehr, wenn stark abgesenkte Szenen noch dumpf klingen; weniger, wenn der Bass zu dick wird.</div>
+        <input type="range" id="band_ld_st" min="0" max="200" step="10" value="70">
+      </div>
+      <canvas id="bandLdCanvas" width="640" height="200" style="width:100%;height:auto;display:block;border-radius:10px;background:var(--card);border:1px solid var(--line)"></canvas>
+      <div class="hint" id="band_ld_live">Aktuell: —</div>
+      <div class="btnrow"><button class="btn" id="resetLd">Zurücksetzen (an · 70 %)</button></div>
+    </div>
+  </section>
+
+  <!-- ============ BAND ============ -->
+  <section class="panel" id="p-mix">
+    <div class="card">
+      <div class="card-t">Quelle</div>
+      <div class="fld-h"><span class="fld-n">Gerade</span><span class="fld-v" id="mixQuelle">&mdash;</span></div>
+      <div class="hint" id="mixHinweis">Der Mixer arbeitet nur, wenn im Reiter Settings der Eingang „USB“ gewählt ist und der Fernseher Dolby Digital 5.1 schickt. Stereo läuft unverändert durch.</div>
+    </div>
+    <div class="card">
+      <div class="card-t">Mix 5.1 → Stereo</div>
+      <div class="hint">Wie viel jede Kanalgruppe zum Stereo beiträgt – links und rechts gleich. Die Summe je Seite bleibt immer 100 %: Ziehst du einen Regler, verteilen sich die anderen anteilig neu, damit nichts übersteuert. Die Lautheitsregelung (Band) arbeitet danach auf dem fertigen Stereo.</div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Front (L/R)</span><span class="fld-v" id="v_mix_front">&mdash;</span></div>
+        <input type="range" id="mix_front" min="0" max="100" step="0.1" value="25.8">
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Center (Sprache)</span><span class="fld-v" id="v_mix_center">&mdash;</span></div>
+        <input type="range" id="mix_center" min="0" max="100" step="0.1" value="32.3">
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">LFE (Subwoofer)</span><span class="fld-v" id="v_mix_lfe">&mdash;</span></div>
+        <input type="range" id="mix_lfe" min="0" max="100" step="0.1" value="27.4">
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Surround (L/R)</span><span class="fld-v" id="v_mix_surround">&mdash;</span></div>
+        <input type="range" id="mix_surround" min="0" max="100" step="0.1" value="14.5">
+      </div>
+      <div class="fld-s">Voreinstellungen</div>
+      <div class="seg" id="mixVoreinst"><button data-v="kino">Kino</button><button data-v="neutral">Neutral</button><button data-v="sprache">Sprache</button></div>
+      <div class="btnrow"><button class="btn" id="mixReset">Zurücksetzen (Kino)</button></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-band">
+    <div class="card">
+      <div class="card-t">Band</div>
+      <div class="hint">Die Lautheitsregelung. Du gibst nur ein <b>Lautheitsband</b> vor: Ist das Programm lauter als die Oberkante, wird bis zur Oberkante abgesenkt; ist es leiser als die Unterkante, wird bis zur Unterkante angehoben; dazwischen wird nichts abgesenkt. Die Anhebung folgt dem Mittel der letzten Sekunde: Sie hebt genau so weit an, dass der Ton knapp über der Unterkante liegt, und wird kleiner, sobald es von selbst lauter wird. Die Oberkante ist zusätzlich eine <b>feste Decke im DSP</b> (Kompressor hinter dem Leveler, 2 ms Attack, wahlweise 30 ms Vorlauf) – eine laute Szene nach einer hochgeregelten leisen kann dadurch nicht mehr über das Band hinausschießen. Im Band wird <b>nicht abgesenkt</b> – das Band bestimmt die Dynamik. Abgesenkt wird nach der 3-s-Lautheit (Short-Term); die Spitzen fängt die Decke. Angehoben wird nach dem 1-s-Mittel: Anhebung = (Unterkante + 10 %) minus dieses Mittel, nie negativ, höchstens +15 dB (mit Sprache +20 dB), in ~1,5 s nachgeführt – nie unterhalb der Rauschsperre.</div>
+    </div>
+    <div class="card">
+      <div class="card-t">Lautheitsband</div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Oberkante</span><span class="fld-v" id="v_band_oben">−26.0 LUFS</span></div>
+        <div class="fld-s">Darüber wird abgesenkt. Die DSP-Decke sitzt 1 dB darüber und fängt nur, was der Leveler noch nicht geschafft hat.</div>
+        <input type="range" id="band_oben" min="-40" max="-8" step="0.5" value="-26">
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Unterkante</span><span class="fld-v" id="v_band_unten">−30.0 LUFS</span></div>
+        <div class="fld-s">Liegt das Mittel der letzten Sekunde darunter, wird genau der fehlende Betrag angehoben (Ziel 10 % über der Kante, höchstens +15 dB, bei erkannter Sprache +20 dB), in ~1,5 s nachgeführt; wird es lauter, geht die Anhebung ebenso zurück. Muss mindestens 1 dB unter der Oberkante liegen.</div>
+        <input type="range" id="band_unten" min="-45" max="-9" step="0.5" value="-30">
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Rauschsperre</span><span class="fld-v" id="v_band_sperre">−40 LUFS</span></div>
+        <div class="fld-s">Eingangssignal unterhalb dieses Werts (vor dem Leveler) wird nie angehoben – Raumatmo, Bandrauschen und gewollte Stille sind keine Gespräche. Höher = vorsichtiger.</div>
+        <input type="range" id="band_sperre" min="-60" max="-20" step="1" value="-40">
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Vorlauf der Decke</span><span class="fld-v" id="v_band_vorlauf">an · 30 ms</span></div>
+        <div class="fld-s">Die Decke sieht den Ton um den Vorlauf früher als das Gain-Element (Lookahead). Mehr Vorlauf = weniger Überschwingen am Einsatz, aber mehr Tonverzögerung. Kein Tempo-Regler: die Decke reagiert immer in 2 ms. Offline gemessen: 0 ms → +11 dB für 43 ms, 25 ms → +6 dB für 28 ms, 30 ms → +4 dB für 7 ms, darüber kein Gewinn. Per Hörtest die Lippensynchronität prüfen.</div>
+        <div class="seg" id="bandVorlaufSeg"><button data-v="1">Vorlauf an</button><button data-v="0">Vorlauf aus</button></div>
+      </div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Länge des Vorlaufs</span><span class="fld-v" id="v_band_vorlauf_ms">30 ms</span></div>
+        <div class="fld-s">5–50 ms. Ändert die Pipeline (kurzer Ruck möglich).</div>
+        <input type="range" id="band_vorlauf_ms" min="5" max="50" step="1" value="30">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Spracherkennung <span class="fld-s">Silero VAD, optional</span></div>
+      <div class="hint">Erkennt, ob gerade gesprochen wird – nur ein Flag, der Ton wird nicht angefasst (~5 % eines Kerns). Bei erkannter Sprache darf bis <b>+20 dB</b> angehoben werden (statt +15) und die Rauschsperre gilt nicht – leise Stimmen kommen also auch unterhalb der Sperre hoch. Ohne Sprache bleibt alles wie bisher.</div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Spracherkennung</span><span class="fld-v" id="v_band_vad">aus</span></div>
+        <div class="seg" id="bandVadSeg"><button data-v="1">an</button><button data-v="0">aus</button></div>
+      </div>
+      <div class="hint" id="band_vad_status">Status: —</div>
+      <div class="btnrow" id="bandVadDl" hidden><button class="btn" id="bandVadDownload">Modell herunterladen (2,3 MB, braucht Internet am Pi)</button></div>
+    </div>
+    <div class="card">
+      <div class="btnrow">
+        <button class="btn" id="resetBand">Zurücksetzen (−26 / −30 · Sperre −40 · Vorlauf an, 30 ms)</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Live</div>
+      <div class="stats">
+        <div class="stat" id="bandStatZustand"><div class="stat-k">Zustand</div><div class="stat-v" id="band_zustand">—</div></div>
+        <div class="stat"><div class="stat-k">Momentary</div><div class="stat-v" id="band_m">—</div></div>
+        <div class="stat"><div class="stat-k">2-s-Mittel</div><div class="stat-v" id="band_prog">—</div></div>
+        <div class="stat"><div class="stat-k">Gain</div><div class="stat-v" id="band_gain">—</div></div>
+      </div>
+      <div class="hint" id="band_sprache_txt" hidden></div>
+      <div class="hint" id="band_decke_txt">Momentary und 2-s-Mittel sind Lautheiten <i>nach</i> dem Leveler (so wie gehört). Das Anheben folgt dem Mittel der letzten Sekunde.</div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="panel" id="p-settings">
+    <div class="card">
+      <div class="card-t">Eingang</div>
+      <div class="seg" id="eingangSeg"><button data-v="hifiberry">HiFiBerry (Toslink)</button><button data-v="usb">USB (miniDSP)</button></div>
+      <div class="fld-h"><span class="fld-n">Zustand</span><span class="fld-v" id="eingangZustand">&mdash;</span></div>
+      <div class="hint"><b>HiFiBerry:</b> der bisherige Weg, nur Stereo – den Fernseher auf <b>PCM</b> stellen. <b>USB:</b> Toslink über den miniDSP MCHStreamer (oder den Hifime UR27). Erkennt selbst Stereo (PCM) oder Dolby Digital/DTS und mischt 5.1 nach dem Reiter „Mix“ auf Stereo – den Fernseher auf „Automatisch“ oder „Bitstream“ stellen.</div>
+      <div class="hint">Fehlt der USB-Empfänger oder kommt von ihm nichts an, liest TVDSP nach wenigen Sekunden automatisch wieder die HiFiBerry. Das Kabel steckt dabei immer nur an einem der beiden.</div>
+    </div>
+    <div class="card">
+      <div class="card-t">Latenz</div>
+      <div class="fld-h"><span class="fld-n">Aktuell</span><span class="fld-v mono" id="sLat">&mdash;</span></div>
+      <div class="seg" id="chunk">
+        <button data-v="256">256</button>
+        <button data-v="512">512</button>
+        <button data-v="1024" class="on">1024</button>
+        <button data-v="2048">2048</button>
+      </div>
+      <div class="hint">Blockgröße der Verarbeitung. Kleiner bedeutet weniger Verzögerung, aber weniger Reserve gegen Aussetzer. Ein Wechsel baut die Verarbeitung neu auf und verursacht kurz Tonstille.</div>
+      <div class="hint">Die Verzögerung des Fernsehers zwischen Bild und Toslink-Ausgang kann TVDSP nicht messen.</div>
+    </div>
+    <div class="card">
+      <div class="card-t">Messbetrieb</div>
+      <div class="hint"><b>Signal aktiv:</b> Regel- und Pegelschleife 20 ms / 50 Hz.</div>
+      <div class="hint"><b>Nach 3 s Stille:</b> Standby mit 1 Hz; FFmpeg/R128 wird beendet und beim nächsten Signal wieder gestartet.</div>
+      <div class="hint">Die Audio-Abtastrate selbst bleibt dabei immer 48 kHz.</div>
+    </div>
+  </section>
+
+  <!-- ============ FLIRC / IR ============ -->
+  <section class="panel" id="p-ir">
+    <div class="card">
+      <div class="card-t">FLIRC-Fernbedienung</div>
+      <div class="hint">Drei Schritte: <b>1.</b> Fernbedienungstasten in den FLIRC-Stick anlernen. <b>2.</b> Mit dem Scan prüfen, ob der Stick die Tasten erkennt. <b>3.</b> Erkannte Tasten den Aktionen Lauter, Leiser, Mute und Ausschalten zuweisen.</div>
+      <div class="fld-h"><span class="fld-n">USB-Stick</span><span class="fld-v" id="flircDevice">&mdash;</span></div>
+      <div class="fld-h"><span class="fld-n">Firmware</span><span class="fld-v mono" id="flircFw">&mdash;</span></div>
+      <div class="fld-h"><span class="fld-n">FLIRC-Werkzeug</span><span class="fld-v" id="flircCli">&mdash;</span></div>
+      <div class="fld-h"><span class="fld-n">Lauscher</span><span class="fld-v" id="flircListener">&mdash;</span></div>
+      <div class="fld-h"><span class="fld-n">Letzte Aktion</span><span class="fld-v" id="flircLast">&mdash;</span></div>
+      <div class="hint mono" id="flircPath">&nbsp;</div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">1 · FLIRC auf Fernbedienung anlernen</div>
+      <div class="hint">Der Stick hat 12 Plätze („Taste 1“ bis „Taste 12“). „Anlernen“ bei einem Platz drücken und innerhalb von 20 s die gewünschte Taste auf der Fernbedienung drücken. Danach die gleiche Taste auf Nachfrage ein zweites Mal drücken: Viele Fernbedienungen senden abwechselnd zwei Codes (Toggle-Bit), erst mit beiden reagiert die Taste bei jedem Druck. „Bereits vorhanden“ heißt: dieser Code ist schon gespeichert.</div>
+      <div class="irslots" id="irSlots"></div>
+      <div class="irbig" id="irBig">Bereit.</div>
+      <div class="irprog" id="irProg"><i></i></div>
+      <div class="irphase hidden" id="irPhase"><span class="ph"></span><span class="el"></span></div>
+      <div class="irkonsole" id="irKonsole"></div>
+      <div class="btnrow hidden" id="irAgainRow">
+        <button class="btn acc" id="irAgain">Dieselbe Taste nochmal drücken</button>
+        <button class="btn" id="irDone">Fertig</button>
+      </div>
+            <div class="hint" id="flircOther"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">2 · Scan: erkennt der Stick die Taste?</div>
+      <div class="hint">Scan starten und Tasten der Fernbedienung drücken oder halten. Jede erkannte Taste erscheint mit Platz-Nummer und Zustand (gedrückt / gehalten / losgelassen). Kommt nichts an, ist die Taste im Stick nicht angelernt.</div>
+      <div class="irbig" id="scanBig">Scan aus</div>
+      <div class="btnrow">
+        <button class="btn acc" id="scanToggle">Scan starten</button>
+      </div>
+      <div class="scanlog" id="scanLog"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">3 · Tasten zuweisen</div>
+      <div class="hint">„Zuweisen“ drücken und dann die gewünschte Fernbedienungstaste 2–3 mal drücken. Alle dabei erkannten Plätze werden der Aktion zugeordnet. <b>Ausschalten</b> fährt den Raspberry Pi sauber herunter; damit das nicht versehentlich passiert, muss die Taste dafür 1,5 s gehalten werden.</div>
+      <div class="irkey">
+        <span class="kn">Lauter</span><span class="ks" id="ira_vol_up">&mdash;</span>
+        <button class="acc irAssign" data-action="vol_up">Zuweisen</button>
+        <button class="danger irUnassign" data-action="vol_up" title="Zuweisung entfernen">✕</button>
+      </div>
+      <div class="irkey">
+        <span class="kn">Leiser</span><span class="ks" id="ira_vol_down">&mdash;</span>
+        <button class="acc irAssign" data-action="vol_down">Zuweisen</button>
+        <button class="danger irUnassign" data-action="vol_down" title="Zuweisung entfernen">✕</button>
+      </div>
+      <div class="irkey">
+        <span class="kn">Mute</span><span class="ks" id="ira_mute">&mdash;</span>
+        <button class="acc irAssign" data-action="mute">Zuweisen</button>
+        <button class="danger irUnassign" data-action="mute" title="Zuweisung entfernen">✕</button>
+      </div>
+      <div class="irkey">
+        <span class="kn">Ausschalten</span><span class="ks" id="ira_poweroff">&mdash;</span>
+        <button class="acc irAssign" data-action="poweroff">Zuweisen</button>
+        <button class="danger irUnassign" data-action="poweroff" title="Zuweisung entfernen">✕</button>
+      </div>
+      <div class="irbig" id="assignBig">Bereit.</div>
+      <div class="irprog" id="asProg"><i></i></div>
+      <div class="irphase hidden" id="asPhase"><span class="ph"></span><span class="el"></span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">Lautstärke</div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Schritt pro Tastendruck</span><span class="fld-v" id="v_flirc_step">1.0 dB</span></div>
+        <div class="fld-s">Beim Halten werden Lauter/Leiser kontrolliert wiederholt. Mute reagiert nur einmal pro Tastendruck.</div>
+        <input type="range" id="flirc_step" min="0.5" max="5" step="0.5" value="1">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">Stick zurücksetzen</div>
+      <div class="hint">Löscht ALLE im FLIRC-Stick gespeicherten Tasten und alle Zuweisungen. Danach muss neu angelernt werden.</div>
+      <div class="btnrow">
+        <button class="btn danger" id="flircFormat">Stick komplett leeren</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REBOOT ============ -->
+  <!-- ============ RECORDS ============ -->
+  <section class="panel" id="p-records">
+    <div class="card">
+      <div class="card-t">TV-Mitschnitt</div>
+      <div class="hint">Zeichnet den TV-Eingang unbearbeitet auf (vor der Dynamikbearbeitung), damit echtes Sendematerial zur Analyse bereitsteht. Aufnahme als MP3 — jederzeit gültige Datei, auch bei Absturz/Stromausfall. Läuft parallel zur Messung, der Ton wird nicht beeinflusst. Stoppt automatisch nach 2 Stunden. Für einen Senderwechsel-Test einfach während der Aufnahme umschalten.</div>
+      <div class="fld">
+        <div class="fld-h"><span class="fld-n">Bitrate</span><span class="fld-v" id="v_rec_br">160 kbps</span></div>
+        <div class="fld-s" id="rec_groesse">≈ 1,2 MB/min · 40 min ≈ 48 MB</div>
+        <input type="range" id="rec_br" min="96" max="320" step="32" value="160">
+      </div>
+      <div class="recstat" id="recStat">Bereit.</div>
+      <div class="btnrow">
+        <button class="btn acc" id="recStart">Aufnahme starten</button>
+        <button class="btn danger" id="recStop" disabled>Stopp</button>
+      </div>
+      <div class="hint" id="recOrdner" style="margin-top:10px"></div>
+      <div class="reclist" id="recList"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-reboot">
+    <div class="card">
+      <div class="card-t">Neu installieren</div>
+      <div class="hint">Führt <code>install.sh</code> aus der Paketkopie auf dem Pi aus – wie eine Neuinstallation: prüft das <b>DSP-Profil</b> (dspdac-noautomute) und flasht es bei Abweichung, setzt Toslink-Register und Doppelton-Schutz (4547 = 0), <code>tv.yml</code>, Dienste und sudo-Regeln. Einstellungen, Klangkurve und IR-Zuweisungen bleiben. Dauert einige Minuten; der Ton setzt kurz aus, die Seite lädt danach neu.</div>
+      <div class="btnrow"><button class="btn acc" id="installStart">Neu installieren</button></div>
+      <pre id="installLog" class="hint" style="white-space:pre-wrap;max-height:260px;overflow:auto;margin-top:10px;font-family:ui-monospace,monospace;font-size:12px" hidden></pre>
+    </div>
+    <div class="card">
+      <div class="card-t">System</div>
+      <div class="hint">Neu starten oder Raspberry Pi OS sauber herunterfahren. Nach Power Off bleibt die 5-V-Versorgung der HiFiBerry-Karte bei angeschlossenem Netzteil physisch vorhanden.</div>
+      <div class="btnrow">
+        <button class="btn" id="reboot">Neu starten</button>
+        <button class="btn danger" id="poweroff">Ausschalten</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============
+       Erklaerungen fuer alles, was nicht auf den ersten Blick klar ist.
+       FESTE ORDNUNG (Nutzerwunsch): Karten nach Reiter gruppiert in der Reihenfolge
+       der Navigation (Klang, EQ, Band, Settings, IR, Records, Reboot), innerhalb
+       eines Reiters in der Reihenfolge der Regler auf der Seite. Titel immer
+       "Reiter · genaue Bezeichnung des Werts", darunter die Erklaerung. Neue
+       Karte an der passenden Stelle einfuegen, nicht anhaengen.
+       Reiterfolge: Klang, EQ, Band, Settings, IR, Records, Reboot. -->
+  <section class="panel" id="p-faq">
+    <div class="card">
+      <div class="card-t">Klang · Kopfzeile: Eingang M, Eingang S, Gehört, Spitze, Umfang LU</div>
+      <div class="hint">
+        <p><b>Eingang M</b> — Lautheit des Toslink-Eingangs über die letzten <b>0,4 Sekunden</b> (Momentary, EBU R128, K-gewichtet = so gewichtet, wie das Ohr Lautheit empfindet). Der „Jetzt“-Wert: springt bei jedem Wort, jedem Effekt. Zu lesen als: <i>So laut kommt es gerade vom Fernseher an, bevor wir etwas tun.</i> Dauerhaft unter −30 = leiser Sender, über −26 = lauter Sender.</p>
+        <p><b>Eingang S</b> — dieselbe Messung über die letzten <b>3 Sekunden</b> (Short-Term). Der ruhige Bruder von M: zeigt die Lautheit der Szene, nicht des Moments. M pendelt um S herum. Liegen beide weit auseinander, ist gerade viel Bewegung im Ton (Dialog mit Effekten); liegen sie eng zusammen, ist die Szene gleichmäßig.</p>
+        <p><b>Gehört</b> — Eingang M <b>plus</b> die Verstärkung, die der Leveler gerade anlegt (Aux1). Also die Lautheit, die zum Verstärker geht, <i>vor</i> dem Pegelregler. Das ist der Wert, den die Regelung im Band halten soll: <b>zwischen Unter- und Oberkante = alles richtig.</b> Die Kachel ist grün, solange die Regelung aktiv arbeitet; „—“ heißt Stille oder keine frischen Messwerte. Gehört − Eingang M ist der aktuelle Gain (im Band-Reiter als Zahl).</p>
+        <p><b>Spitze</b> — der höchste <b>Einzelabtastwert</b> am Ausgang in dBFS, mit kurzem Nachhalten (~1,2 s). Keine Lautheit, sondern technische Aussteuerung: 0 dBFS wäre digitales Clipping, der Limiter hält bei −2. Gelb ab −6, rot an der Grenze. Zu lesen als: <i>Wie nah ist der Ausgang am digitalen Anschlag?</i> Wird er oft rot, arbeitet der Limiter dauernd – das hört man als Härte.</p>
+        <p><b>Umfang LU</b> — die Lautheitsspanne der letzten <b>2 Minuten</b> am Eingang: Abstand zwischen den leisen (10 %-Quantil) und den lauten (95 %-Quantil) Momenten. Grob die „Dynamik des Programms“: Nachrichten ~3–5 LU, Spielfilm 10–15, Orchester 15–20. Nur Anzeige – sie hilft einzuschätzen, wie hart das Band arbeiten muss: Ist der Umfang deutlich größer als die Bandbreite, kann nicht alles im Band liegen; die Decke fängt dann die Spitzen.</p>
+        <p>Zusammen gelesen: <b>M/S = was reinkommt · Gehört = was die Regelung daraus macht (soll im Band sein) · Spitze = technische Sicherheit · Umfang = wie schwer die Aufgabe gerade ist.</b></p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Klang · Lautheit live und der Pegelregler</div>
+      <div class="hint">
+        <p>Die grüne Linie zeigt den Ausgang <b>vor dem Pegelregler</b> – das Ergebnis der Regelung in LUFS, gemessen am echten Ausgang, den Pegel wieder herausgerechnet. Die tatsächliche Ausgangslautstärke ist <b>Grün + Pegel</b>: Grün bei −28 und Pegel −35,5 ergibt −63,5 dBFS zum Verstärker.</p>
+        <p>Warum so: Das Band ist <i>vor</i> dem Pegel definiert – das ist die Größe, auf die die Regelung arbeitet. Steckte der Pegel drin, läge die Linie 35 dB unter dem Band, und jeder Druck auf die Fernbedienung würde sie verschieben, ohne dass die Regelung etwas getan hat.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Klang · Stumm</div>
+      <div class="hint">
+        <p>Schaltet den Ton ab, ohne den Pegel zu verändern. Sobald die Lautstärke verändert wird – am Pegelregler oder mit Lauter/Leiser auf der Fernbedienung –, ist Stumm automatisch wieder aus. So wundert man sich nicht, warum es beim Lauterdrücken still bleibt. Die Mute-Taste der Fernbedienung schaltet Stumm wie bisher ein und aus.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Klang · Höhen dämpfen</div>
+      <div class="hint">
+        <p>Helle Töne wirken bei Zimmerlautstärke lauter, als die Lautheitsmessung sie einschätzt. Werbung ist dafür typisch: an deinen Mitschnitten war sie heller als das meiste Programm – sie liegt im Diagramm an derselben Stelle und wirkt trotzdem lauter.</p>
+        <p>Mit diesem Schalter misst TVDSP laufend, wie laut die Höhen über 3 kHz im Verhältnis zum ganzen Ton sind (Mittel über 3 s). Liegt dieser Höhenanteil über −8 dB, werden die Höhen um genau den Überschuss gedämpft, höchstens um 6 dB – schnell herunter (0,3 s), langsam zurück (1,5 s). Dunkle Szenen und die meiste Sprache bleiben unberührt; helle Stellen im Programm (Zischlaute, Musik mit viel Höhen) werden ebenfalls etwas gedämpft, Werbung am häufigsten. Die Lautheitsregelung arbeitet unverändert davor. Unter dem Schalter steht, wie viel gerade gedämpft wird.</p>
+        <p>Ausgeschaltet ist die Stufe gar nicht in der Verarbeitung. Im Bypass ist sie immer aus.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Mix · Regler und Voreinstellungen</div>
+      <div class="hint">
+        <p>Kommt Dolby Digital 5.1 über den USB-Eingang, macht der Mixer daraus Stereo: Jede Seite bekommt Front, Center, LFE und Surround in den eingestellten Anteilen. Die Anteile ergeben zusammen immer 100 % – so kann der Mix nicht übersteuern, und die Lautheitsregelung dahinter gleicht die Gesamtlautstärke ohnehin an.</p>
+        <p>„Kino“ ist der Standard: Center etwas stärker als Front, der Subwoofer-Kanal spielt mit. „Neutral“ ist der übliche Fernseh-Downmix ohne Subwoofer. „Sprache“ gibt dem Center die Hälfte – Dialoge werden deutlicher, Musik und Effekte treten zurück. Bei Stereo-Sendungen tut der Mixer nichts.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Band · Unterkante (Anhebung nur bis dorthin)</div>
+      <div class="hint">
+        <p>Die Anhebung wird laufend aus dem Mittel der letzten Sekunde berechnet: Unterkante + 10 % minus dieses Mittel. Ist es leise, wird genau so weit angehoben, dass der Ton knapp über der Unterkante liegt; wird es lauter, wird die Anhebung im selben Maß kleiner – bis 0 dB, weiter nach unten geht nur die Oberkante. Die Änderung wird über ~1,5 s nachgeführt; sofort nachgeführt pumpt es hörbar (am Mitschnitt nachgerechnet).</p>
+        <p>Bis 2.9.4 blieb eine Anhebung stehen, bis die Oberkante erreicht war: Nach einer leisen Stelle landete Grün dadurch oft ganz oben im Band. Wird die Anhebung gerade kleiner, steht im Band-Reiter „Anhebung zurück“.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Band · Decke (fest auf „Effekte“ geeicht)</div>
+      <div class="hint">
+        <p>Die Decke liegt 1 dB über der Oberkante des Bandes und fängt alles ab, was schneller kommt, als die Regelung nachführen kann – Schüsse, Explosionen, laute Musikeinsätze.</p>
+        <p>Ihre Höhe ist fest auf Effekt-Material geeicht: Ein kurzer Knall klingt bei gleicher gemessener Lautheit lauter als Sprache, deshalb greift sie dort genau an der richtigen Stelle. Bis 2.8.x war die Eichung (Sprache/Mitte/Effekte) wählbar; „Effekte“ hat sich bewährt und ist jetzt fest.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Band · Länge des Vorlaufs der Decke</div>
+      <div class="hint">
+        <p>Der Vorlauf macht die Decke nicht schneller (sie reagiert immer in 2 ms), sondern informiert sie früher: Die Nutzkanäle werden um den Vorlauf verzögert, der Sidechain nicht.</p>
+        <p><b>Mehr Vorlauf (Richtung 50 ms)</b></p>
+        <ul>
+          <li><b>Vorteil:</b> Der erste Knall eines Effekts kommt praktisch nicht mehr über die Oberkante — die Decke hat den Gain schon unten, wenn das Signal am Gain-Element ankommt. Ab ~30 ms ist der Einsatz sauber, darüber bringt es nichts mehr.</li>
+          <li><b>Nachteil:</b> Der gesamte Ton wird um diesen Wert später ausgegeben — immer, nicht nur bei Knallen. Grundlatenz der Kette ist ~63 ms, dazu kommt der Vorlauf: bei 50 ms sind das ~115 ms hinter dem Bild. Faustregel: bis ~100 ms merkt man es beim Fernsehen meist nicht, darüber wird Lippensynchronität sichtbar.</li>
+        </ul>
+        <p><b>Weniger Vorlauf (Richtung 5 ms)</b></p>
+        <ul>
+          <li><b>Vorteil:</b> Weniger Verzögerung, Bild und Ton liegen enger zusammen.</li>
+          <li><b>Nachteil:</b> Die ersten 20–40 ms eines lauten Einsatzes schießen über die Oberkante — bei 5 ms fast wie ohne Vorlauf (rund +10 dB für gut 40 ms). Das ist genau der „Schlag“, den man bei Explosionen oder Werbeeinsatz als kurzen Stich hört, bevor die Decke greift.</li>
+        </ul>
+        <p>Standard 30 ms. Was sich nicht ändert: Reaktionszeit der Decke, Lautheit im Band, Leveler, Klang.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">Settings · Eingang</div>
+      <div class="hint">
+        <p><b>HiFiBerry</b> nimmt den Toslink-Eingang der HiFiBerry – nur Stereo. <b>USB</b> nimmt den miniDSP MCHStreamer (oder, falls stattdessen gesteckt, den Hifime UR27): TVDSP erkennt, ob der Fernseher Stereo (PCM) oder Dolby Digital schickt, decodiert Dolby und mischt 5.1 nach dem Reiter „Mix“ auf Stereo. Alles danach – Band, Decke, EQ, Pegel – ist bei beiden Eingängen gleich.</p>
+        <p>Der miniDSP läuft mit der Uhr des Fernsehers, die HiFiBerry mit ihrer eigenen; TVDSP gleicht das unhörbar aus (einige Millionstel). Der miniDSP folgt dem Takt des Toslink-Eingangs und verliert dabei nichts (gemessen: 0 kaputte Dolby-Pakete in 2 min). Der UR27 verliert gelegentlich Samples; dann wird ein beschädigtes Dolby-Paket (32 ms) durch kurze Stille ersetzt – nie durch Rauschen. Wie oft das passiert, steht unter „Zustand“.</p>
+        <p>Fehlt der USB-Empfänger oder kommt nichts an, schaltet TVDSP nach wenigen Sekunden von selbst auf die HiFiBerry zurück; kommt er wieder, schaltet es zurück.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="build">Version 3.3.9</div>
+</main>
+
+<div class="bottom-nav-shell">
+  <nav>
+    <button class="on" data-p="klang"><svg class="ico" viewBox="0 0 24 24"><path d="M4 14v-4M9 18V6M14 20V4M19 15v-6"/></svg>Klang</button>
+    <button data-p="eq"><svg class="ico" viewBox="0 0 24 24"><path d="M3 16c4 0 5-8 9-8s5 6 9 6"/></svg>EQ</button>
+    <button data-p="mix"><svg class="ico" viewBox="0 0 24 24"><path d="M5 21v-6M5 11V3M12 21v-9M12 8V3M19 21v-4M19 13V3M2 15h6M9 8h6M16 17h6"/></svg>Mix</button>
+    <button data-p="band"><svg class="ico" viewBox="0 0 24 24"><path d="M3 8h18M3 16h18M7 8v8M12 5v3M12 16v3M17 8v8"/></svg>Band</button>
+    <button data-p="settings"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>Settings</button>
+    <button data-p="ir"><svg class="ico" viewBox="0 0 24 24"><path d="M5 12h2M17 12h2M8 8.5a5 5 0 0 1 8 0M6 5a9 9 0 0 1 12 0M12 11v8M9 19h6"/></svg>IR</button>
+    <button data-p="records"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Records</button>
+    <button data-p="reboot"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>Reboot</button>
+    <button data-p="faq"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/></svg>FAQ</button>
+  </nav>
+  <div class="nav-scroll-hint" aria-hidden="true"><span>←</span><span class="line"></span><span>→</span></div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const N = 16;
+// Anteil am Zug bei ±1 / ±2 / ±3 Bändern:
+//   schmal 6 % / 0 % / 0 %   normal 50 % / 6 % / 0 %   breit 73 % / 29 % / 6 %
+const SIGMA = {einzeln:0.6, normal:1.2, breit:1.8};
+// Bandbreite der 16 Glockenfilter in Oktaven - fest, unabhaengig von der
+// Pinselbreite (2.8.6). Muss zu EQ_BANDBREITE im Backend passen.
+const EQ_BW = 1.0;
+let BANDS = [16,25,40,63,100,160,250,400,630,1000,1600,2500,4000,6300,10000,16000];
+const LBL = ["16","25","40","63","100","160","250","400",
+             "630","1k","1.6k","2.5k","4k","6.3k","10k","16k"];
+const LBL_ZEIGEN = [0,3,6,9,12,15];   // 16, 63, 250, 1k, 4k, 16k
+const FMT = {
+  dynamik: v => v.toFixed(1)+" LU",
+  spitze:  v => v.toFixed(1)+" dB",
+  attack:  v => (v*1000).toFixed(0)+" ms",
+  release: v => (v*1000).toFixed(0)+" ms",
+  ziel:    v => v.toFixed(1)+" LUFS",
+  rampe:   v => v.toFixed(1)+" dB/s",
+  volume:  v => v >= -0.05 ? "0 dB · MAX" : v.toFixed(1)+" dB"
+};
+
+/* ---------------- Pull-to-refresh ----------------
+   Der feste App-Rahmen bleibt erhalten, damit die Bottom-Navigation auf
+   Mobilgeraeten nicht mit der Browserleiste springt. Statt eines unsichtbaren
+   Reloads zeigt TVDSP jetzt einen nativen aehnlichen Refresh-Indikator mit
+   Zugfortschritt, Loslass-Schwelle und Spinner. */
+const scrollMain = document.querySelector("main");
+const ptr = document.getElementById("ptrIndicator");
+const ptrText = document.getElementById("ptrText");
+let pullStartY = null;
+let pullLastY = null;
+let pullAktiv = false;
+let pullReady = false;
+let pullHaptic = false;
+const PULL_REFRESH_PX = 72;
+const PULL_MAX_VIS = 68;
+
+function ptrVisual(dy){
+  if(!ptr) return;
+  const vis = Math.min(PULL_MAX_VIS, Math.max(0, dy) * 0.85);
+  const progress = Math.min(1, Math.max(0, dy) / PULL_REFRESH_PX);
+  const y = -54 + vis;
+  const scale = 0.88 + progress * 0.12;
+  ptr.classList.add("show");
+  ptr.style.transition = "none";
+  ptr.style.transform = `translate(-50%,${y}px) scale(${scale})`;
+  const ico = ptr.querySelector(".ptr-ico");
+  if(ico) ico.style.transform = `rotate(${Math.round(progress*250)}deg)`;
+}
+
+function pullReset(anim=true){
+  pullStartY = null;
+  pullLastY = null;
+  pullAktiv = false;
+  pullReady = false;
+  pullHaptic = false;
+  if(!ptr || ptr.classList.contains("loading")) return;
+  ptr.classList.remove("ready");
+  if(ptrText) ptrText.textContent = "Zum Aktualisieren ziehen";
+  ptr.style.transition = anim ? "transform .18s ease,opacity .16s ease" : "none";
+  ptr.style.transform = "translate(-50%,-62px) scale(.88)";
+  ptr.classList.remove("show");
+  const ico = ptr.querySelector(".ptr-ico");
+  if(ico) ico.style.transform = "rotate(0deg)";
+}
+
+document.addEventListener("touchstart", ev => {
+  if(ev.touches.length !== 1 || !scrollMain || scrollMain.scrollTop > 1) return;
+  if(ev.target.closest(".bottom-nav-shell,input,button,canvas,select,textarea")) return;
+  pullStartY = ev.touches[0].clientY;
+  pullLastY = pullStartY;
+  pullAktiv = true;
+  pullReady = false;
+  pullHaptic = false;
+}, {passive:true});
+
+document.addEventListener("touchmove", ev => {
+  if(!pullAktiv || ev.touches.length !== 1 || pullStartY === null) return;
+  pullLastY = ev.touches[0].clientY;
+  const dy = pullLastY - pullStartY;
+  if(dy <= 0){ pullReset(); return; }
+  if(!scrollMain || scrollMain.scrollTop > 1){ pullReset(); return; }
+
+  // Eigene elastische Pull-Geste: verhindert nur am oberen Anschlag das
+  // Scrollen, normale Seitennavigation bleibt unangetastet.
+  ev.preventDefault();
+  ptrVisual(dy);
+  const ready = dy >= PULL_REFRESH_PX;
+  if(ready !== pullReady){
+    pullReady = ready;
+    ptr?.classList.toggle("ready", ready);
+    if(ptrText) ptrText.textContent = ready ? "Loslassen zum Aktualisieren" : "Zum Aktualisieren ziehen";
+  }
+  if(ready && !pullHaptic){
+    pullHaptic = true;
+    try{ navigator.vibrate?.(12); }catch(_e){}
+  }
+}, {passive:false});
+
+function pullEnde(){
+  if(!pullAktiv || pullStartY === null){ pullReset(); return; }
+  const dy = (pullLastY ?? pullStartY) - pullStartY;
+  const oben = scrollMain && scrollMain.scrollTop <= 1;
+  const doRefresh = oben && dy >= PULL_REFRESH_PX;
+  pullStartY = pullLastY = null;
+  pullAktiv = false;
+  pullReady = false;
+  if(!doRefresh){ pullReset(); return; }
+
+  if(ptr){
+    ptr.classList.remove("ready");
+    ptr.classList.add("loading","show");
+    ptr.style.transition = "transform .16s ease,opacity .16s ease";
+    ptr.style.transform = "translate(-50%,6px) scale(1)";
+    const ico = ptr.querySelector(".ptr-ico");
+    if(ico) ico.style.transform = "";
+  }
+  if(ptrText) ptrText.textContent = "Aktualisiere …";
+  setTimeout(() => window.location.reload(), 140);
+}
+
+document.addEventListener("touchend", pullEnde, {passive:true});
+document.addEventListener("touchcancel", () => pullReset(), {passive:true});
+
+let gains = new Array(N).fill(0);
+// Schutz seit 1.9.31: Die Kurve startet hier flach, weil noch nichts geladen
+// ist. Wird sie vor dem ersten erfolgreichen Laden angefasst, wuerde eine
+// FLACHE Kurve an den DSP gesendet und die echte ueberschrieben. Deshalb
+// darf erst gesendet werden, wenn die Kurve einmal vom Backend kam.
+let eqGeladen = false;
+let spread = "normal";
+let eqTimer = null, volTimer = null;
+
+// Welche Regler der Nutzer GERADE anfasst. Wird ueber echte Zeige-/
+// Ziehgesten gefuehrt, nicht ueber document.activeElement - denn auf
+// Touch-Geraeten bleibt ein Slider nach dem Antippen fokussiert, auch
+// wenn man ihn laengst losgelassen hat. Nur waehrend der aktiven Phase
+// darf der Status-Poll den Regler NICHT ueberschreiben (sonst springt
+// er unter dem Finger weg). Auf allen anderen Geraeten zieht er dadurch
+// fast live nach (Poll alle 300 ms). Nach dem Loslassen bleibt der
+// Regler kurz "in Benutzung", damit der zuletzt gesendete Wert nicht
+// vom noch nachlaufenden alten Status ueberschrieben wird.
+const inBenutzung = {};
+function reglerLive(id){
+  const el = $(id);
+  const an  = () => { inBenutzung[id] = true; };
+  const aus = () => {
+    setTimeout(() => { inBenutzung[id] = false; }, 500);
+  };
+  el.addEventListener("pointerdown", an);
+  el.addEventListener("pointerup",   aus);
+  el.addEventListener("pointercancel", aus);
+  // Tastatur/sonstige Eingabe: waehrend input aktiv, kurz danach frei.
+  el.addEventListener("input", () => { inBenutzung[id] = true; aus(); });
+}
+
+function fehler(msg){
+  const b = $("err");
+  if(!msg){ b.classList.add("hidden"); return; }
+  b.textContent = msg; b.classList.remove("hidden");
+}
+async function api(pfad, opt){
+  const r = await fetch(pfad, opt);
+  const d = await r.json();
+  if(!d.ok) throw new Error(d.error || "Fehler");
+  return d;
+}
+
+/* ---------------- Navigation ---------------- */
+document.querySelectorAll("nav button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.remove("on"));
+    document.querySelectorAll(".panel").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    $("p-"+b.dataset.p).classList.add("on");
+    // resize statt zeichne: solange der Bereich ausgeblendet war, meldet
+    // der Browser die Leinwandbreite als 0. Erst nach dem Einblenden
+    // lassen sich die Abmessungen überhaupt bestimmen.
+    if(b.dataset.p === "eq"){
+      requestAnimationFrame(() => {
+        resize();
+        if(!W) fehler("Klangkurve konnte nicht vermessen werden - bitte Seite neu laden.");
+      });
+    }
+    if(b.dataset.p === "ir") flircStatus(true);
+    if(b.dataset.p === "mix") mixLaden();
+  };
+});
+
+/* ---------------- Klangkurve ---------------- */
+const cv = $("eq"), ctx = cv.getContext("2d");
+let W = 0, H = 0, dpr = 1;
+const PAD = 16, RANGE = 12, TOP = 14, UNTEN = 24;
+
+function resize(){
+  dpr = window.devicePixelRatio || 1;
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  zeichne();
+}
+const feldU = () => H - UNTEN;
+const mitte = () => (TOP + feldU()) / 2;
+const bx = i => PAD + i * (W - 2*PAD) / (N - 1);
+const by = g => mitte() - (g / RANGE) * (mitte() - TOP);
+const yToG = y => Math.max(-RANGE, Math.min(RANGE,
+                    (mitte() - y) / (mitte() - TOP) * RANGE));
+
+// Betragsfrequenzgang eines Peaking-Biquads nach RBJ, in dB - mit
+// Bandbreite in Oktaven und deren Vorverzerrung (w0/sin w0), genau wie
+// CamillaDSP ("bandwidth") und ffmpeg (width_type=o) seit 2.8.5 rechnen.
+// Mit Q wurde die Glocke nahe 24 kHz gestaucht (Bogen zwischen 10/16 kHz).
+function peakingDb(f, f0, gainDb){
+  if(Math.abs(gainDb) < 0.001) return 0;
+  const A = Math.pow(10, gainDb/40);
+  const w0 = 2*Math.PI*f0/48000;
+  const bw = EQ_BW;
+  const al = Math.sin(w0)*Math.sinh(Math.LN2/2*bw*w0/Math.sin(w0));
+  const b0 = 1+al*A, b1 = -2*Math.cos(w0), b2 = 1-al*A;
+  const a0 = 1+al/A, a1 = -2*Math.cos(w0), a2 = 1-al/A;
+  const w = 2*Math.PI*f/48000;
+  const cw = Math.cos(w), sw = Math.sin(w), c2 = Math.cos(2*w), s2 = Math.sin(2*w);
+  const zr = b0 + b1*cw + b2*c2, zi = -(b1*sw + b2*s2);
+  const nr = a0 + a1*cw + a2*c2, ni = -(a1*sw + a2*s2);
+  return 10*Math.log10((zr*zr+zi*zi)/(nr*nr+ni*ni));
+}
+
+// Tatsächliche Antwort bei einer Frequenz, inklusive der Überlagerung
+// benachbarter Filter.
+function antwortBei(f){
+  let db = 0;
+  for(let i=0;i<N;i++) db += peakingDb(f, BANDS[i], gains[i]);
+  return Math.max(-RANGE, Math.min(RANGE, db));
+}
+
+function frequenzgang(){
+  const out = [];
+  for(let px = PAD; px <= W-PAD; px += 2){
+    const t = (px-PAD)/(W-2*PAD);
+    const f = BANDS[0] * Math.pow(BANDS[N-1]/BANDS[0], t);
+    let db = 0;
+    for(let i=0;i<N;i++) db += peakingDb(f, BANDS[i], gains[i]);
+    out.push([px, by(Math.max(-RANGE, Math.min(RANGE, db)))]);
+  }
+  return out;
+}
+
+let messeGerade = false;
+function zeichne(){
+  if(!W || !H){
+    // Aufruf aus einem ausgeblendeten Bereich - einmal nachmessen und
+    // erneut versuchen. Das Flag verhindert eine Endlosschleife.
+    if(messeGerade) return;
+    messeGerade = true; resize(); messeGerade = false;
+    return;
+  }
+  ctx.clearRect(0,0,W,H);
+
+  // Gegen fehlerhafte Werte absichern - ein einzelnes undefined würde
+  // sonst die ganze Kurve stillschweigend verschlucken.
+  for(let i=0;i<N;i++){
+    const v = Number(gains[i]);
+    gains[i] = Number.isFinite(v) ? Math.max(-RANGE, Math.min(RANGE, v)) : 0;
+  }
+
+  ctx.strokeStyle = "#1e2127"; ctx.lineWidth = 1;
+  [-12,-6,6,12].forEach(g => {
+    const y = by(g);
+    ctx.beginPath(); ctx.moveTo(PAD,y); ctx.lineTo(W-PAD,y); ctx.stroke();
+  });
+
+  ctx.strokeStyle = "#191c21";
+  LBL_ZEIGEN.forEach(i => {
+    const x = bx(i);
+    ctx.beginPath(); ctx.moveTo(x,TOP); ctx.lineTo(x,feldU()); ctx.stroke();
+  });
+
+  ctx.strokeStyle = "#2b2f36";
+  ctx.beginPath(); ctx.moveTo(PAD,by(0)); ctx.lineTo(W-PAD,by(0)); ctx.stroke();
+
+  ctx.fillStyle = "#5b6169";
+  ctx.font = "10px 'JetBrains Mono', monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  LBL_ZEIGEN.forEach(i => {
+    let x = bx(i);
+    if(i === 0) x += 6;
+    if(i === N-1) x -= 6;
+    ctx.fillText(LBL[i], x, feldU() + 7);
+  });
+
+  // Stützpunkte auf der Linie: gezeichnet wird der tatsächliche
+  // Frequenzgang, also müssen die Punkte auch dort sitzen. Auf den
+  // eingestellten Wert gesetzt lägen sie daneben, weil sich benachbarte
+  // Filter überlagern - bei 4/8/4 dB kommen 5,9/9,6/5,8 dB heraus.
+  const pts = gains.map((g,i) => [bx(i), by(antwortBei(BANDS[i]))]);
+  const punkte = frequenzgang();
+  ctx.beginPath();
+  punkte.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+  ctx.strokeStyle = "#4ade9b"; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
+  ctx.stroke();
+
+  ctx.lineTo(W-PAD, by(0)); ctx.lineTo(PAD, by(0)); ctx.closePath();
+  ctx.fillStyle = "rgba(74,222,155,.09)"; ctx.fill();
+
+  pts.forEach(([x,y],i) => {
+    const aktivBand = (aktiv === i);
+    const gesetzt = Math.abs(gains[i]) > 0.05;
+    ctx.beginPath(); ctx.arc(x, y, aktivBand ? 7 : (gesetzt ? 4.5 : 3), 0, 7);
+    ctx.fillStyle = aktivBand ? "#eaf6ef" : (gesetzt ? "#4ade9b" : "#3a4048");
+    ctx.fill();
+    if(aktivBand){
+      ctx.beginPath(); ctx.arc(x, y, 12, 0, 7);
+      ctx.strokeStyle = "rgba(74,222,155,.45)"; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  });
+}
+
+// Glatte Kurve (2.8.6). Der Nutzer setzt die Werte an den 16 Punkten. Die
+// Linie DAZWISCHEN soll glatt verlaufen und nie ueber die Verbindung zweier
+// Punkte hinaus ausbeulen (monotone kubische Interpolation, PCHIP). Gesucht
+// sind die Reglerwerte der 16 Glockenfilter, deren echte Summe dieser Linie
+// am besten folgt (gewichtete kleinste Quadrate, Punkte stark gewichtet,
+// Gauss-Newton mit Daempfung). Identisches Verfahren wie
+// eq_glatt_loesen() im Backend.
+const EQ_TEILE = 12, EQ_PUNKTGEWICHT = 30, EQ_DAEMPFUNG = 0.02;
+let eqRaster = null;
+function eqRasterBauen(){
+  const xs = [];
+  for(let k=0;k<N-1;k++){
+    const a = Math.log(BANDS[k]), b = Math.log(BANDS[k+1]);
+    for(let t=0;t<EQ_TEILE;t++) xs.push(a + (b-a)*t/EQ_TEILE);
+  }
+  xs.push(Math.log(BANDS[N-1]));
+  const r = {x: xs, cw: [], sw: [], c2: [], s2: [], gew: [], band: []};
+  xs.forEach((x,j) => {
+    const w = 2*Math.PI*Math.exp(x)/48000;
+    r.cw.push(Math.cos(w)); r.sw.push(Math.sin(w)); r.c2.push(Math.cos(2*w)); r.s2.push(Math.sin(2*w));
+    r.gew.push(j % EQ_TEILE === 0 ? EQ_PUNKTGEWICHT : 1);
+  });
+  for(let i=0;i<N;i++){
+    const w0 = 2*Math.PI*BANDS[i]/48000;
+    r.band.push({c: -2*Math.cos(w0), al: Math.sin(w0)*Math.sinh(Math.LN2/2*EQ_BW*w0/Math.sin(w0))});
+  }
+  return r;
+}
+function bandDbRaster(r, i, g, j){
+  if(Math.abs(g) < 1e-6) return 0;
+  const A = Math.pow(10, g/40), bd = r.band[i];
+  const b0 = 1+bd.al*A, b2 = 1-bd.al*A, a0 = 1+bd.al/A, a2 = 1-bd.al/A, c = bd.c;
+  const zr = b0 + c*r.cw[j] + b2*r.c2[j], zi = c*r.sw[j] + b2*r.s2[j];
+  const nr = a0 + c*r.cw[j] + a2*r.c2[j], ni = c*r.sw[j] + a2*r.s2[j];
+  return 10*Math.log10((zr*zr+zi*zi)/(nr*nr+ni*ni));
+}
+function pchip(xk, yk, x){
+  const n = xk.length, h = [], d = [], m = new Array(n).fill(0);
+  for(let k=0;k<n-1;k++){ h.push(xk[k+1]-xk[k]); d.push((yk[k+1]-yk[k])/h[k]); }
+  for(let k=1;k<n-1;k++){
+    if(d[k-1]*d[k] > 0){
+      const w1 = 2*h[k]+h[k-1], w2 = h[k]+2*h[k-1];
+      m[k] = (w1+w2)/(w1/d[k-1] + w2/d[k]);
+    }
+  }
+  m[0] = d[0] * d[0] > 0 ? d[0] : 0; m[n-1] = d[n-2];
+  if(d[0]*m[0] <= 0) m[0] = 0;
+  if(d[n-2]*m[n-1] <= 0) m[n-1] = 0;
+  let i = 0; while(i < n-2 && x > xk[i+1]) i++;
+  const t = (x-xk[i])/h[i];
+  const h00 = 2*t*t*t-3*t*t+1, h10 = t*t*t-2*t*t+t, h01 = -2*t*t*t+3*t*t, h11 = t*t*t-t*t;
+  return h00*yk[i] + h10*h[i]*m[i] + h01*yk[i+1] + h11*h[i]*m[i+1];
+}
+function eqGlattLoesen(punkte, start, iterationen){
+  if(!eqRaster) eqRaster = eqRasterBauen();
+  const r = eqRaster, M = r.x.length, xk = BANDS.map(Math.log);
+  const T = r.x.map(x => pchip(xk, punkte, x));
+  let g = (start || punkte).slice();
+  for(let it=0; it<iterationen; it++){
+    const bd = [], sum = new Array(M).fill(0);
+    for(let i=0;i<N;i++){ const row = []; for(let j=0;j<M;j++){ const v = bandDbRaster(r,i,g[i],j); row.push(v); sum[j] += v; } bd.push(row); }
+    const J = [];
+    for(let i=0;i<N;i++){ const row = []; for(let j=0;j<M;j++) row.push((bandDbRaster(r,i,g[i]+1e-3,j) - bd[i][j]) / 1e-3); J.push(row); }
+    // (J^T W J + lambda I) dg = -J^T W res
+    const Am = [], bv = [];
+    for(let a=0;a<N;a++){
+      const zeile = new Array(N).fill(0); let rhs = 0;
+      for(let j=0;j<M;j++){
+        const wj = r.gew[j]*J[a][j];
+        rhs -= wj*(sum[j]-T[j]);
+        for(let b=a;b<N;b++) zeile[b] += wj*J[b][j];
+      }
+      zeile[a] += EQ_DAEMPFUNG; Am.push(zeile); bv.push(rhs);
+    }
+    for(let a=0;a<N;a++) for(let b=0;b<a;b++) Am[a][b] = Am[b][a];
+    // Gauss-Elimination mit Pivotsuche
+    for(let c=0;c<N;c++){
+      let p = c; for(let k=c+1;k<N;k++) if(Math.abs(Am[k][c]) > Math.abs(Am[p][c])) p = k;
+      [Am[c],Am[p]] = [Am[p],Am[c]]; [bv[c],bv[p]] = [bv[p],bv[c]];
+      for(let k=c+1;k<N;k++){ const f = Am[k][c]/Am[c][c]; for(let b=c;b<N;b++) Am[k][b] -= f*Am[c][b]; bv[k] -= f*bv[c]; }
+    }
+    const dg = new Array(N).fill(0);
+    for(let c=N-1;c>=0;c--){ let v = bv[c]; for(let b=c+1;b<N;b++) v -= Am[c][b]*dg[b]; dg[c] = v/Am[c][c]; }
+    let groesste = 0;
+    for(let i=0;i<N;i++){ g[i] = Math.max(-RANGE, Math.min(RANGE, g[i]+dg[i])); groesste = Math.max(groesste, Math.abs(dg[i])); }
+    if(groesste < 1e-4) break;
+  }
+  return g;
+}
+function punkteJetzt(){ return BANDS.map(f => antwortBei(f)); }
+
+// Der Finger setzt den Wert der KURVE am gezogenen Punkt. Die Nachbarpunkte
+// gehen je nach Pinselbreite anteilig mit (Glocke ueber die Punktwerte, von
+// der Momentaufnahme bei Ziehbeginn aus - nie vom laufenden Stand, sonst
+// verflacht die Glocke binnen einer Sekunde zum Plateau). Die Reglerwerte
+// rechnet eqGlattLoesen() aus: waehrend des Ziehens mit wenigen Schritten
+// vom aktuellen Stand aus, beim Loslassen vollstaendig.
+let zielPunkte = null;
+function ziehe(idx, zielWirkung, iterationen){
+  if(!basis) return;
+  const s = SIGMA[spread];
+  const delta = zielWirkung - basis[idx];
+  zielPunkte = basis.map((p,i) => {
+    const d = (i - idx) / s, f = Math.exp(-d*d);
+    return f < 0.005 ? p : Math.max(-RANGE, Math.min(RANGE, p + delta*f));
+  });
+  gains = eqGlattLoesen(zielPunkte, gains, iterationen || 5);
+  const wirkung = antwortBei(BANDS[idx]);
+  $("eqBand").textContent = LBL[idx] + " Hz";
+  $("eqVal").textContent = (wirkung >= 0 ? "+" : "") + wirkung.toFixed(1) + " dB";
+}
+
+let aktiv = null, basis = null;
+function naechster(x){
+  let best = 0, bd = 1e9;
+  for(let i=0;i<N;i++){ const d = Math.abs(bx(i)-x); if(d<bd){bd=d;best=i;} }
+  return best;
+}
+function pos(e){
+  const r = cv.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return [t.clientX - r.left, t.clientY - r.top];
+}
+function start(e){
+  e.preventDefault();
+  inBenutzung["eq"] = true;
+  const [x,y] = pos(e);
+  aktiv = naechster(x);
+  basis = punkteJetzt();          // Momentaufnahme der Punktwerte für die ganze Geste
+  ziehe(aktiv, yToG(y)); zeichne(); sendeEq(true);
+}
+// Hoechstens eine Rechnung pro Bildaufbau: der Glatt-Loeser braucht auf
+// dem Handy ~20 ms, Beruehrungsereignisse kommen oefter. Ohne Buendelung
+// stauten sie sich und die Kurve liefe dem Finger hinterher.
+let zugY = null, zugGeplant = false;
+function move(e){
+  if(aktiv === null) return;
+  e.preventDefault();
+  zugY = pos(e)[1];
+  if(zugGeplant) return;
+  zugGeplant = true;
+  requestAnimationFrame(() => {
+    zugGeplant = false;
+    if(aktiv === null || zugY === null) return;
+    ziehe(aktiv, yToG(zugY)); zeichne(); sendeEq(true);
+  });
+}
+function ende(){
+  if(aktiv === null) return;
+  // Beim Loslassen vollstaendig ausrechnen (waehrend des Ziehens nur grob).
+  if(zielPunkte) gains = eqGlattLoesen(zielPunkte, gains, 40);
+  aktiv = null; basis = null; zielPunkte = null;
+  $("eqBand").innerHTML = "&nbsp;"; $("eqVal").innerHTML = "&nbsp;";
+  zeichne(); sendeEq(false);
+  // Kurz "in Benutzung" halten, damit der zuletzt gesendete Wert nicht
+  // vom noch nachlaufenden alten Status ueberschrieben wird.
+  setTimeout(() => { inBenutzung["eq"] = false; }, 500);
+}
+cv.addEventListener("touchstart", start, {passive:false});
+cv.addEventListener("touchmove", move, {passive:false});
+cv.addEventListener("touchend", ende);
+cv.addEventListener("mousedown", start);
+window.addEventListener("mousemove", move);
+window.addEventListener("mouseup", ende);
+
+// Während des Ziehens gedrosselt senden - sonst baut CamillaDSP die
+// Pipeline bei jedem Berührungsereignis neu und es knackt.
+function sendeEq(gedrosselt){
+  if(!eqGeladen){
+    fehler("Klangkurve noch nicht vom Gerät geladen – bitte Seite neu laden, bevor du sie änderst.");
+    return;
+  }
+  const push = () => api("/api/eq",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({gains, spread})}).catch(e => fehler(e.message));
+  if(gedrosselt){
+    if(eqTimer) return;
+    eqTimer = setTimeout(() => { eqTimer = null; push(); }, 125);
+  } else {
+    clearTimeout(eqTimer); eqTimer = null; push();
+  }
+}
+
+$("eqFlat").onclick = () => { inBenutzung["eq"]=true; gains.fill(0); basis = null; zeichne(); sendeEq(false); setTimeout(()=>{inBenutzung["eq"]=false;},500); };
+$("eqNorm").onclick = () => {
+  inBenutzung["eq"]=true;
+  // Mittelwert der PUNKTE auf 0 dB schieben, Reglerwerte daraus neu rechnen.
+  const p = punkteJetzt(), m = p.reduce((a,b)=>a+b,0)/N;
+  gains = eqGlattLoesen(p.map(v => v - m), gains, 40); basis = null; zeichne(); sendeEq(false);
+  setTimeout(()=>{inBenutzung["eq"]=false;},500);
+};
+document.querySelectorAll("#spread button").forEach(b => {
+  b.onclick = () => {
+    inBenutzung["eq"]=true;
+    document.querySelectorAll("#spread button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); spread = b.dataset.v; zeichne(); sendeEq(false);
+    setTimeout(()=>{inBenutzung["eq"]=false;},500);
+  };
+});
+
+/* ---------------- Modi ---------------- */
+/* ---------------- Lautheitsverlauf (Klang) ---------------- */
+const verlauf = {fein: [], grob: [], seitFein: 0, seitGrob: 0, jetzt: 0, minuten: 2, band: null, lauf: false, skala: "alles"};
+try{ const g = localStorage.getItem("tvdsp_verlauf_skala"); if(g === "band" || g === "auto" || g === "alles") verlauf.skala = g; }catch(e){}
+async function verlaufHolen(){
+  if(verlauf.lauf) return; verlauf.lauf = true;
+  try{
+    const d = await api("/api/verlauf?fein=" + verlauf.seitFein + "&grob=" + verlauf.seitGrob);
+    verlauf.jetzt = d.jetzt; verlauf.band = d.band;
+    if(d.fein.length){ verlauf.fein.push(...d.fein); verlauf.seitFein = d.fein[d.fein.length-1][0]; }
+    if(d.grob.length){ verlauf.grob.push(...d.grob); verlauf.seitGrob = d.grob[d.grob.length-1][0]; }
+    // Nur behalten, was das groesste Fenster braucht
+    const fMin = d.jetzt - 130, gMin = d.jetzt - 1860;
+    while(verlauf.fein.length && verlauf.fein[0][0] < fMin) verlauf.fein.shift();
+    while(verlauf.grob.length && verlauf.grob[0][0] < gMin) verlauf.grob.shift();
+    zeichneVerlauf();
+  }catch(e){ /* Diagramm bleibt stehen */ }
+  finally{ verlauf.lauf = false; }
+}
+function zeichneVerlauf(){
+  const cv = $("verlaufCanvas"); if(!cv || !verlauf.jetzt) return;
+  const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, L = 34, R = 8, T = 10, B = 22;
+  const span = verlauf.minuten * 60, t1 = verlauf.jetzt, t0 = t1 - span;
+  const bandAktiv = true;
+  // Skala: "alles" fest; "band" = Band (bzw. Ziel) mit 15 % Rand fuer Ueberschreitungen; "auto" = Min/Max der sichtbaren Werte
+  let dbMin = -60, dbMax = 0;
+  if(verlauf.skala === "band"){
+    const o = verlauf.band ? (bandAktiv ? verlauf.band.oben : verlauf.band.ziel + 2) : -26,
+          u = verlauf.band ? (bandAktiv ? verlauf.band.unten : verlauf.band.ziel - 2) : -30;
+    const rand = Math.max(3, 0.10 * Math.abs((o + u) / 2));
+    dbMin = Math.floor((u - rand)); dbMax = Math.ceil((o + rand));
+  } else if(verlauf.skala === "auto"){
+    const werte = [];
+    if(verlauf.minuten === 2) verlauf.fein.forEach(e => { if(e[0] >= t0){ werte.push(e[1], e[2]); } });
+    else verlauf.grob.forEach(e => { if(e[0] >= t0){ werte.push(e[1], e[2], e[4], e[5]); } });
+    const sicht = werte.filter(v => v > -59.5);
+    if(sicht.length){ dbMin = Math.floor((Math.min(...sicht) - 2) / 5) * 5; dbMax = Math.ceil((Math.max(...sicht) + 2) / 5) * 5; }
+    if(dbMax - dbMin < 10){ dbMax = dbMin + 10; }
+    dbMin = Math.max(-60, dbMin); dbMax = Math.min(0, dbMax);
+  }
+  const X = t => L + (W-L-R) * (t - t0) / span;
+  const Y = db => T + (H-T-B) * (1 - (Math.max(dbMin, Math.min(dbMax, db)) - dbMin) / (dbMax - dbMin));
+  const css = getComputedStyle(document.documentElement);
+  const faint = css.getPropertyValue("--faint").trim() || "#777", line = css.getPropertyValue("--line").trim() || "#333";
+  ctx.clearRect(0,0,W,H);
+  ctx.font = "11px system-ui, sans-serif"; ctx.lineWidth = 1;
+  // Band, Decke, Rauschsperre nur bei aktivem Band-Zweig; sonst die Ziellinie
+  const strich = (db, farbe) => { if(db < dbMin || db > dbMax) return; ctx.strokeStyle = farbe; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(L, Y(db)); ctx.lineTo(W-R, Y(db)); ctx.stroke(); ctx.setLineDash([]); };
+  if(bandAktiv && verlauf.band){
+    ctx.fillStyle = "rgba(74,222,155,.20)";
+    ctx.fillRect(L, Y(verlauf.band.oben), W-L-R, Y(verlauf.band.unten) - Y(verlauf.band.oben));
+    strich(verlauf.band.decke, "rgba(229,100,78,.85)");
+    if(verlauf.band.rauschsperre !== undefined) strich(verlauf.band.rauschsperre, "rgba(232,184,75,.9)");
+  } else if(verlauf.band && verlauf.band.ziel !== undefined){
+    strich(verlauf.band.ziel, "rgba(74,222,155,.85)");
+  }
+
+  // Raster
+  ctx.strokeStyle = line; ctx.fillStyle = faint;
+  const rasterSchritt = (dbMax - dbMin) <= 16 ? 2 : ((dbMax - dbMin) <= 35 ? 5 : 10);
+  for(let db = Math.ceil(dbMin / rasterSchritt) * rasterSchritt; db <= dbMax; db += rasterSchritt){ ctx.beginPath(); ctx.moveTo(L, Y(db)); ctx.lineTo(W-R, Y(db)); ctx.stroke(); ctx.fillText(db, 4, Y(db)+4); }
+  const schritt = verlauf.minuten === 2 ? 30 : (verlauf.minuten === 10 ? 120 : 300);
+  for(let s = schritt; s < span; s += schritt){ const x = X(t1 - s); ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, H-B); ctx.stroke(); ctx.fillText("-" + (s >= 60 ? (s/60) + " min" : s + " s"), x-14, H-7); }
+  // Daten
+  const clip = () => { ctx.save(); ctx.beginPath(); ctx.rect(L, T, W-L-R, H-T-B); ctx.clip(); };
+  if(verlauf.minuten === 2){
+    const pts = verlauf.fein.filter(e => e[0] >= t0);
+    const linie = (idx, farbe) => { clip(); ctx.strokeStyle = farbe; ctx.lineWidth = 1.6; ctx.beginPath();
+      pts.forEach((e,i) => { const x = X(e[0]), y = Y(e[idx]); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); }); ctx.stroke(); ctx.restore(); };
+    linie(1, "#e5644e"); linie(2, "#4ade9b");
+  } else {
+    const pts = verlauf.grob.filter(e => e[0] >= t0);
+    const huelle = (iMin, iMax, iMean, farbeF, farbeL) => {
+      clip(); ctx.fillStyle = farbeF; ctx.beginPath();
+      pts.forEach((e,i) => { const x = X(e[0]), y = Y(e[iMax]); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+      for(let i = pts.length-1; i >= 0; i--) ctx.lineTo(X(pts[i][0]), Y(pts[i][iMin]));
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = farbeL; ctx.lineWidth = 1.2; ctx.beginPath();
+      pts.forEach((e,i) => { const x = X(e[0]), y = Y(e[iMean]); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); }); ctx.stroke(); ctx.restore(); };
+    huelle(1, 2, 3, "rgba(229,100,78,.28)", "#e5644e");
+    huelle(4, 5, 6, "rgba(74,222,155,.30)", "#4ade9b");
+  }
+  ctx.strokeStyle = faint; ctx.strokeRect(L, T, W-L-R, H-T-B);
+}
+document.querySelectorAll("#verlaufFenster button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#verlaufFenster button").forEach(x => x.classList.toggle("on", x === b));
+  verlauf.minuten = parseInt(b.dataset.min, 10); zeichneVerlauf();
+});
+document.querySelectorAll("#verlaufSkala button").forEach(b => {
+  b.classList.toggle("on", b.dataset.s === verlauf.skala);
+  b.onclick = () => {
+    document.querySelectorAll("#verlaufSkala button").forEach(x => x.classList.toggle("on", x === b));
+    verlauf.skala = b.dataset.s; try{ localStorage.setItem("tvdsp_verlauf_skala", verlauf.skala); }catch(e){}
+    zeichneVerlauf();
+  };
+});
+setInterval(verlaufHolen, 1000); verlaufHolen();
+
+/* ---------------- Band ---------------- */
+let bandTimer = null;
+function bandAnzeige(){
+  $("v_band_oben").textContent  = Number($("band_oben").value).toFixed(1).replace("-","\u2212") + " LUFS";
+  $("v_band_unten").textContent = Number($("band_unten").value).toFixed(1).replace("-","\u2212") + " LUFS";
+  $("v_band_sperre").textContent = Number($("band_sperre").value).toFixed(0).replace("-","\u2212") + " LUFS";
+  $("v_band_ld_st").textContent = Number($("band_ld_st").value).toFixed(0) + " %";
+  $("v_band_vorlauf_ms").textContent = Number($("band_vorlauf_ms").value).toFixed(0) + " ms";
+  zeichneBandLd();
+}
+function bandLaden(bs, live){
+  if(bs){
+    if(!inBenutzung["band_oben"])  $("band_oben").value  = Number(bs.oben);
+    if(!inBenutzung["band_unten"]) $("band_unten").value = Number(bs.unten);
+    if(!inBenutzung["band_sperre"] && bs.rauschsperre !== undefined) $("band_sperre").value = Number(bs.rauschsperre);
+    if(!inBenutzung["band_vorlauf_ms"] && bs.vorlauf_ms !== undefined) $("band_vorlauf_ms").value = Number(bs.vorlauf_ms);
+    if(!inBenutzung["band_ld_st"] && bs.loudness_staerke !== undefined) $("band_ld_st").value = Number(bs.loudness_staerke);
+    if(!inBenutzung["band_vad"] && bs.vad !== undefined){
+      document.querySelectorAll("#bandVadSeg button").forEach(b => b.classList.toggle("on", (b.dataset.v === "1") === !!bs.vad));
+      $("v_band_vad").textContent = bs.vad ? "an" : "aus";
+    }
+    if(bs.vad_status){
+      const v = bs.vad_status;
+      let txt = "Status: " + (v.verfuegbar ? (v.aktiv ? ("läuft · Sprache: " + (v.sprache ? "ja" : "nein") + (v.anteil !== null && v.anteil !== undefined ? " (" + v.anteil + " % der letzten Sekunde)" : "")) : (bs.vad ? "eingeschaltet, wartet auf Band-Zweig/Ton" : "bereit, ausgeschaltet")) : ("nicht verfügbar – " + v.meldung));
+      $("band_vad_status").textContent = txt;
+      $("bandVadDl").hidden = !(v.modell_bytes < 1000000);
+    }
+    if(!inBenutzung["band_ld"] && bs.loudness !== undefined){
+      document.querySelectorAll("#bandLdSeg button").forEach(b => b.classList.toggle("on", (b.dataset.v === "1") === !!bs.loudness));
+      $("v_band_ld").textContent = bs.loudness ? "an" : "aus";
+    }
+    if(!inBenutzung["band_vorlauf"]){
+      document.querySelectorAll("#bandVorlaufSeg button").forEach(b =>
+        b.classList.toggle("on", (b.dataset.v === "1") === !!bs.vorlauf));
+      $("v_band_vorlauf").textContent = bs.vorlauf ? ("an \u00b7 " + Number(bs.vorlauf_ms||30).toFixed(0) + " ms") : "aus";
+    }
+    bandAnzeige();
+  }
+  const f = v => (v === null || v === undefined) ? "\u2014" : Number(v).toFixed(1);
+  if(live){
+    $("band_zustand").textContent = live.zustand || "\u2014";
+    $("band_m").textContent    = f(live.m);
+    $("band_prog").textContent = f(live.programm);
+    $("band_gain").textContent = (live.gain === null || live.gain === undefined) ? "\u2014" : (live.gain >= 0 ? "+" : "") + Number(live.gain).toFixed(1) + " dB";
+    $("band_ld_live").textContent = "Aktuell: " + (live.loudness_prozent === null || live.loudness_prozent === undefined ? "\u2014" : Number(live.loudness_prozent).toFixed(0) + " % der Kurve");
+    $("band_sprache_txt").hidden = live.sprache === undefined;
+    $("band_sprache_txt").textContent = live.sprache ? "Sprache erkannt – Deckel +20 dB, Rauschsperre aus" : "keine Sprache – Deckel +15 dB";
+    const neuAnteil = (live.loudness_prozent === null || live.loudness_prozent === undefined) ? 0 : Number(live.loudness_prozent)/100;
+    if(Math.abs(neuAnteil - bandLdLiveAnteil) > 0.01){ bandLdLiveAnteil = neuAnteil; zeichneBandLd(); }
+    const z = live.zustand || "";
+    $("bandStatZustand").className = "stat" + (z === "zu laut" ? " hot" : (z === "im Band" ? " aktiv" : (z === "halten" ? " tot" : "")));
+    $("band_decke_txt").textContent = "Decke: " + (live.decke_dbfs === null || live.decke_dbfs === undefined ? "\u2014" : Number(live.decke_dbfs).toFixed(1) + " dBFS")
+      + " (Oberkante + 1 dB) \u00b7 Vorlauf " + (live.vorlauf_ms ? live.vorlauf_ms + " ms" : "aus")
+      + " \u00b7 Momentary/2-s-Mittel sind Lautheiten nach dem Leveler; das Anheben folgt dem Mittel der letzten Sekunde.";
+  } else {
+    ["band_zustand","band_m","band_prog","band_gain"].forEach(id => $(id).textContent = "\u2014");
+    $("bandStatZustand").className = "stat";
+    if(bandLdLiveAnteil !== 0){ bandLdLiveAnteil = 0; zeichneBandLd(); }
+    $("band_sprache_txt").hidden = true;
+  }
+}
+// Kurve der Loudness-Kompensation: |1 + a·(H(f) − 1)| mit H = Low-Shelf +6 dB @120 Hz,
+// High-Shelf +2 dB @6 kHz, Trim −1,4 dB (RBJ-Biquads, wie in CamillaDSP). Kraeftige
+// Linie = Kurve bei voller Absenkung (20 dB) fuer die eingestellte Staerke, duenne
+// Linie = das, was gerade anliegt (Live-Anteil). Reine Anzeige, nichts ziehbar.
+let bandLdLiveAnteil = 0;
+function ldShelf(typ, f0, q, gdb, fs){
+  const A = Math.pow(10, gdb/40), w0 = 2*Math.PI*f0/fs, c = Math.cos(w0), al = Math.sin(w0)/(2*q), sA = 2*Math.sqrt(A)*al;
+  let b0,b1,b2,a0,a1,a2;
+  if(typ === "ls"){ b0=A*((A+1)-(A-1)*c+sA); b1=2*A*((A-1)-(A+1)*c); b2=A*((A+1)-(A-1)*c-sA); a0=(A+1)+(A-1)*c+sA; a1=-2*((A-1)+(A+1)*c); a2=(A+1)+(A-1)*c-sA; }
+  else { b0=A*((A+1)+(A-1)*c+sA); b1=-2*A*((A-1)+(A+1)*c); b2=A*((A+1)+(A-1)*c-sA); a0=(A+1)-(A-1)*c+sA; a1=2*((A-1)-(A+1)*c); a2=(A+1)-(A-1)*c-sA; }
+  return [b0/a0,b1/a0,b2/a0,1,a1/a0,a2/a0];
+}
+function ldEval(co, f, fs){        // komplexe Uebertragung eines Biquads bei f
+  const w = 2*Math.PI*f/fs, c1=Math.cos(w), s1=Math.sin(w), c2=Math.cos(2*w), s2=Math.sin(2*w);
+  const nr = co[0]+co[1]*c1+co[2]*c2, ni = -(co[1]*s1+co[2]*s2);
+  const dr = co[3]+co[4]*c1+co[5]*c2, di = -(co[4]*s1+co[5]*s2);
+  const d = dr*dr+di*di;
+  return [(nr*dr+ni*di)/d, (ni*dr-nr*di)/d];
+}
+function ldKurveDb(a, f){
+  const fs = 48000, ls = ldShelf("ls",120,0.7,6,fs), hs = ldShelf("hs",6000,0.7,2,fs), trim = Math.pow(10,-1.4/20);
+  const [r1,i1] = ldEval(ls,f,fs), [r2,i2] = ldEval(hs,f,fs);
+  const hr = (r1*r2 - i1*i2)*trim, hi = (r1*i2 + i1*r2)*trim;     // H(f)
+  const mr = 1 + a*(hr-1), mi = a*hi;                               // 1 + a(H-1)
+  return 20*Math.log10(Math.max(1e-6, Math.hypot(mr, mi)));
+}
+function zeichneBandLd(){
+  const cv = $("bandLdCanvas"); if(!cv) return;
+  const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, L = 34, R = 10, T = 14, B = 26;
+  const fmin = 20, fmax = 20000, dbMin = -6, dbMax = 8;
+  const X = f => L + (W-L-R) * Math.log(f/fmin)/Math.log(fmax/fmin);
+  const Y = db => T + (H-T-B) * (1 - (db-dbMin)/(dbMax-dbMin));
+  const css = getComputedStyle(document.documentElement);
+  const faint = css.getPropertyValue("--faint").trim() || "#777", line = css.getPropertyValue("--line").trim() || "#333", acc = css.getPropertyValue("--acc").trim() || "#4ade9b";
+  ctx.clearRect(0,0,W,H);
+  ctx.font = "11px system-ui, sans-serif"; ctx.fillStyle = faint; ctx.strokeStyle = line; ctx.lineWidth = 1;
+  [-6,-3,0,3,6].forEach(db => { ctx.beginPath(); ctx.moveTo(L, Y(db)); ctx.lineTo(W-R, Y(db)); ctx.stroke(); ctx.fillText((db>0?"+":"")+db, 4, Y(db)+4); });
+  [50,100,200,500,1000,2000,5000,10000].forEach(f => { ctx.beginPath(); ctx.moveTo(X(f), T); ctx.lineTo(X(f), H-B); ctx.stroke(); ctx.fillText(f>=1000 ? (f/1000)+"k" : f, X(f)-8, H-8); });
+  ctx.strokeStyle = faint; ctx.beginPath(); ctx.moveTo(L, Y(0)); ctx.lineTo(W-R, Y(0)); ctx.stroke();
+  const zeichneLinie = (a, farbe, breite) => {
+    ctx.strokeStyle = farbe; ctx.lineWidth = breite; ctx.beginPath();
+    for(let px = L; px <= W-R; px++){
+      const f = fmin * Math.pow(fmax/fmin, (px-L)/(W-L-R)), y = Y(ldKurveDb(a, f));
+      px === L ? ctx.moveTo(px, y) : ctx.lineTo(px, y);
+    }
+    ctx.stroke();
+  };
+  const staerke = Number($("band_ld_st").value)/100;
+  zeichneLinie(Math.min(1, staerke), acc, 2.5);                    // bei 20 dB Absenkung
+  if(bandLdLiveAnteil > 0.005) zeichneLinie(bandLdLiveAnteil, "#e8b84b", 1.2);   // gerade anliegend
+  ctx.fillStyle = acc; ctx.fillText("bei 20 dB Absenkung (Stärke " + Math.round(staerke*100) + " %)", L+6, T+10);
+  if(bandLdLiveAnteil > 0.005){ ctx.fillStyle = "#e8b84b"; ctx.fillText("gerade: " + Math.round(bandLdLiveAnteil*100) + " % der Kurve", L+6, T+24); }
+}
+async function sendeBand(){
+  try{
+    const vorlaufBtn = document.querySelector("#bandVorlaufSeg button.on");
+    await api("/api/band/settings",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        oben:Number($("band_oben").value),
+        unten:Number($("band_unten").value),
+        rauschsperre:Number($("band_sperre").value),
+        vorlauf_ms:Number($("band_vorlauf_ms").value),
+        loudness: (document.querySelector("#bandLdSeg button.on") || {dataset:{v:"1"}}).dataset.v === "1",
+        vad: (document.querySelector("#bandVadSeg button.on") || {dataset:{v:"0"}}).dataset.v === "1",
+        loudness_staerke:Number($("band_ld_st").value),
+        vorlauf: vorlaufBtn ? vorlaufBtn.dataset.v === "1" : true
+      })});
+    fehler(null);
+  }catch(e){ fehler(e.message); }
+}
+/* ---------------- Mix und Eingang (ab 3.0.0) ---------------- */
+const MIX_KEYS = ["front", "center", "lfe", "surround"];
+let mixWerte = {front:0.258, center:0.323, lfe:0.274, surround:0.145}, mixTimer = null;
+function zahlDe(x, n){ return Number(x).toFixed(n).replace(".", ",").replace("-", "\u2212"); }
+function mixAnzeige(){
+  MIX_KEYS.forEach(k => {
+    const v = mixWerte[k];
+    $("v_mix_"+k).textContent = zahlDe(v*100, 1) + " %" + (v > 0.0005 ? " \u00b7 " + zahlDe(20*Math.log10(v), 1) + " dB" : " \u00b7 aus");
+  });
+}
+function mixNormieren(geaendert){
+  // Der bewegte Regler gilt, die anderen teilen sich den
+  // Rest anteilig - die Summe bleibt 100 %.
+  const v = Math.min(1, Math.max(0, Number($("mix_"+geaendert).value)/100));
+  const andere = MIX_KEYS.filter(k => k !== geaendert);
+  const summe = andere.reduce((s, k) => s + mixWerte[k], 0);
+  mixWerte[geaendert] = v;
+  andere.forEach(k => { mixWerte[k] = summe > 1e-9 ? mixWerte[k]/summe*(1-v) : (1-v)/andere.length; });
+  andere.forEach(k => { $("mix_"+k).value = (mixWerte[k]*100).toFixed(1); });
+}
+function mixUebernehmen(d){
+  mixWerte = Object.assign({}, d.mix);
+  MIX_KEYS.forEach(k => { if(!inBenutzung["mix_"+k]) $("mix_"+k).value = (d.mix[k]*100).toFixed(1); });
+  document.querySelectorAll("#mixVoreinst button").forEach(b => b.classList.toggle("on", b.dataset.v === d.voreinstellung));
+  mixAnzeige();
+  if(d.eingang) eingangAnzeige(d.eingang);
+}
+async function mixSenden(body){
+  try{
+    mixUebernehmen(await api("/api/mix", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}));
+  }catch(e){ fehler("Mix: " + e.message); }
+}
+async function mixLaden(){ try{ mixUebernehmen(await api("/api/mix")); }catch(e){} }
+MIX_KEYS.forEach(k => {
+  reglerLive("mix_"+k);
+  $("mix_"+k).addEventListener("input", () => {
+    mixNormieren(k); mixAnzeige();
+    document.querySelectorAll("#mixVoreinst button").forEach(b => b.classList.remove("on"));
+    clearTimeout(mixTimer); mixTimer = setTimeout(() => mixSenden({mix: mixWerte}), 200);
+  });
+});
+document.querySelectorAll("#mixVoreinst button").forEach(b => b.addEventListener("click", () => mixSenden({voreinstellung: b.dataset.v})));
+$("mixReset").addEventListener("click", () => mixSenden({voreinstellung: "kino"}));
+function layoutText(l, n){
+  if(!l) return n ? n + " Kanäle" : "";
+  return l.replace("(side)", "").replace("(back)", "").replace("stereo", "2.0").replace("mono", "1.0");
+}
+function eingangAnzeige(e){
+  if(!e) return;
+  document.querySelectorAll("#eingangSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === e.gewaehlt));
+  let zustand, quelle;
+  if(e.gewaehlt !== "usb"){
+    zustand = "HiFiBerry" + (e.geraet ? " \u00b7 " + e.geraet + " steckt" : "");
+    quelle = "HiFiBerry-Eingang \u2013 Stereo, Mixer nicht aktiv";
+  }else if(e.rueckfall){
+    zustand = e.geraet ? "Rückfall auf HiFiBerry \u2013 " + e.geraet + " liefert nichts" : "Rückfall auf HiFiBerry \u2013 kein USB-Empfänger";
+    quelle = zustand + " \u2013 Mixer nicht aktiv";
+  }else{
+    const fmt = e.format ? (e.format + (e.format === "PCM" ? " Stereo" : " " + layoutText(e.layout, e.kanaele))) : "kein Signal";
+    const fehl = (e.fehler_60s !== null && e.fehler_60s !== undefined && e.format && e.format !== "PCM") ? " \u00b7 " + e.fehler_60s + " Aussetzer/min" : "";
+    zustand = "USB" + (e.geraet ? " (" + e.geraet + ")" : "") + " \u00b7 " + fmt + fehl;
+    quelle = fmt + (e.mixer_aktiv ? " \u2013 Mixer aktiv" : " \u2013 Mixer nicht aktiv") + fehl;
+  }
+  $("eingangZustand").textContent = zustand;
+  $("mixQuelle").textContent = quelle;
+}
+document.querySelectorAll("#eingangSeg button").forEach(b => b.addEventListener("click", async () => {
+  try{ eingangAnzeige(await api("/api/eingang", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({eingang: b.dataset.v})})); }
+  catch(e){ fehler("Eingang: " + e.message); }
+}));
+mixAnzeige(); mixLaden();
+
+["band_oben","band_unten","band_sperre","band_ld_st","band_vorlauf_ms"].forEach(id => {
+  reglerLive(id);
+  $(id).addEventListener("input", () => {
+    // Unterkante immer mindestens 1 dB unter der Oberkante halten
+    if(id === "band_oben" && Number($("band_unten").value) > Number($("band_oben").value) - 1)
+      $("band_unten").value = Number($("band_oben").value) - 1;
+    if(id === "band_unten" && Number($("band_unten").value) > Number($("band_oben").value) - 1)
+      $("band_unten").value = Number($("band_oben").value) - 1;
+    bandAnzeige();
+    clearTimeout(bandTimer); bandTimer = setTimeout(sendeBand, 250);
+  });
+});
+
+document.querySelectorAll("#bandVadSeg button").forEach(b => b.onclick = () => {
+  inBenutzung["band_vad"] = true;
+  document.querySelectorAll("#bandVadSeg button").forEach(x => x.classList.toggle("on", x === b));
+  $("v_band_vad").textContent = b.dataset.v === "1" ? "an" : "aus";
+  sendeBand().finally(() => setTimeout(() => { inBenutzung["band_vad"] = false; }, 800));
+});
+$("bandVadDownload").onclick = async () => {
+  const k = $("bandVadDownload"); k.disabled = true; k.textContent = "Lade …";
+  try{
+    const d = await api("/api/band/vad/download",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    $("band_vad_status").textContent = "Status: Modell geladen (" + Math.round(d.modell_bytes/1024) + " KB)";
+    $("bandVadDl").hidden = true; fehler(null);
+  }catch(e){ fehler("Download fehlgeschlagen: " + e.message); }
+  finally{ k.disabled = false; k.textContent = "Modell herunterladen (2,3 MB, braucht Internet am Pi)"; }
+};
+document.querySelectorAll("#bandLdSeg button").forEach(b => b.onclick = () => {
+  inBenutzung["band_ld"] = true;
+  document.querySelectorAll("#bandLdSeg button").forEach(x => x.classList.toggle("on", x === b));
+  $("v_band_ld").textContent = b.dataset.v === "1" ? "an" : "aus";
+  sendeBand().finally(() => setTimeout(() => { inBenutzung["band_ld"] = false; }, 800));
+});
+document.querySelectorAll("#bandVorlaufSeg button").forEach(b => b.onclick = () => {
+  inBenutzung["band_vorlauf"] = true;
+  document.querySelectorAll("#bandVorlaufSeg button").forEach(x => x.classList.toggle("on", x === b));
+  sendeBand().finally(() => setTimeout(() => { inBenutzung["band_vorlauf"] = false; }, 800));
+});
+$("resetBand").onclick = async () => {
+  if(!confirm("Band auf Auslieferung zurücksetzen?\nOberkante −26 · Unterkante −30 · Rauschsperre −40 · Vorlauf an, 30 ms")) return;
+  try{
+    const d = await api("/api/band/reset",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    bandLaden(d.band_settings, null); fehler(null);
+  }catch(e){ fehler(e.message); }
+};
+
+$("resetLd").onclick = () => {
+  if(!confirm("Loudness-Kompensation zurücksetzen?\nan · 70 %")) return;
+  document.querySelectorAll("#bandLdSeg button").forEach(x => x.classList.toggle("on", x.dataset.v === "1"));
+  $("v_band_ld").textContent = "an"; $("band_ld_st").value = 70; bandAnzeige();
+  sendeBand();
+};
+
+/* ---------------- Schalter und Pegel ---------------- */
+function toggle(id, key, start){
+  const b = $(id);
+  b.classList.toggle("on", !!start);
+  b.onclick = async () => {
+    const neu = !b.classList.contains("on");
+    b.classList.toggle("on", neu);
+    try{
+      await api("/api/schalter",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({[key]:neu})});
+      fehler(null);
+    }catch(e){ fehler(e.message); b.classList.toggle("on", !neu); }
+  };
+}
+$("volume").addEventListener("input", e => {
+  const v = parseFloat(e.target.value);
+  $("v_volume").textContent = FMT.volume(v);
+  clearTimeout(volTimer);
+  volTimer = setTimeout(() => {
+    api("/api/schalter",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({volume:v})}).catch(e => fehler(e.message));
+  }, 100);
+});
+reglerLive("volume");
+document.querySelectorAll("#chunk button").forEach(b => {
+  b.onclick = async () => {
+    const vorher = document.querySelector("#chunk button.on");
+    document.querySelectorAll("#chunk button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    try{
+      await api("/api/chunksize",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({chunksize:parseInt(b.dataset.v,10)})});
+      fehler(null);
+    }catch(e){
+      fehler(e.message);
+      b.classList.remove("on");
+      if(vorher) vorher.classList.add("on");
+    }
+  };
+});
+
+
+/* ---------------- IR-Fernbedienung (Software-Lernen) ---------------- */
+const FLIRC_LABEL = {vol_up:"Lauter", vol_down:"Leiser", mute:"Mute", poweroff:"Ausschalten"};
+let flircBusy = false;
+let irLetzterSlot = null;
+let irSlotsGebaut = false;
+
+function irBig(id, txt, cls){
+  const b = $(id); b.textContent = txt; b.className = "irbig" + (cls ? " " + cls : "");
+}
+function irKnoepfe(an){
+  document.querySelectorAll(".irRec,.irDel,.irAssign,.irUnassign").forEach(x => x.disabled = !an);
+}
+function irSlotsBauen(){
+  const box = $("irSlots"); box.innerHTML = "";
+  for(let nr=1; nr<=12; nr++){
+    const d = document.createElement("div"); d.className = "irslot"; d.id = "slot_"+nr;
+    d.innerHTML = '<span class="sn">Taste '+nr+'</span><span class="sh" id="sloth_'+nr+'">—</span>'
+      + '<span class="sb"><button class="acc irRec" data-nr="'+nr+'">Anlernen</button>'
+      + '<button class="danger irDel" data-nr="'+nr+'" title="Platz löschen">✕</button></span>';
+    box.append(d);
+  }
+  box.querySelectorAll(".irRec").forEach(b => { b.onclick = () => irAufnehmen(parseInt(b.dataset.nr), false); });
+  box.querySelectorAll(".irDel").forEach(b => { b.onclick = () => irLoeschen(parseInt(b.dataset.nr)); });
+  irSlotsGebaut = true;
+}
+
+async function flircStatus(refresh){
+  if(flircBusy) return;
+  if(!irSlotsGebaut) irSlotsBauen();
+  try{
+    const d = await api("/api/flirc/status" + (refresh ? "?refresh=1" : ""));
+    $("flircDevice").textContent = d.devices && d.devices.length ? "erkannt"
+      : (d.usb ? "am USB erkannt, kein Eingabegerät" : "nicht erkannt");
+    $("flircFw").textContent = d.firmware ? (d.firmware + (d.sku ? " · " + d.sku : "")) : "—";
+    $("flircCli").textContent = d.cli_ok ? (d.hw_ok ? "bereit" : (d.busy ? "beschäftigt" : (d.usb ? "keine Antwort" : "bereit, kein Stick")))
+      : (d.setup_active ? "wird installiert…" : "fehlt");
+    $("flircListener").textContent = d.listener ? "aktiv" : "inaktiv";
+    $("flircPath").textContent = d.devices && d.devices.length ? d.devices.join(" · ")
+      : (d.hw_error ? d.hw_error : "Kein FLIRC-Stick erkannt · Stick einstecken.");
+    for(const sl of (d.slots || [])){
+      const el = $("sloth_"+sl.nr), box = $("slot_"+sl.nr);
+      if(!el) continue;
+      const n = (sl.eintraege || []).length;
+      slotBelegt[sl.nr] = n;
+      const rb = box.querySelector(".irRec");
+      if(n){ el.textContent = n + (n===1?" Code":" Codes") + ": " + sl.eintraege.map(k=>k.hash).join(", "); box.classList.add("ok"); if(rb) rb.textContent = "+ Code"; }
+      else { el.textContent = d.hw_ok ? "frei" : "—"; box.classList.remove("ok"); if(rb) rb.textContent = "Anlernen"; }
+    }
+    const zu = d.zuweisung || {};
+    for(const a of ["vol_up","vol_down","mute","poweroff"]){
+      const el = $("ira_"+a); const l = zu[a] || [];
+      if(l.length){ el.textContent = l.map(x=>x.label).join(", "); el.className = "ks ok"; }
+      else { el.textContent = "nicht zugewiesen"; el.className = "ks"; }
+    }
+    const andere = d.andere || [];
+    $("flircOther").textContent = andere.length ? ("Außerdem im Stick, nicht von TVDSP: " + andere.map(x=>x.key).join(", ") + " (über „Stick komplett leeren“ entfernbar).") : "";
+    if(!inBenutzung["flirc_step"] && d.step != null){
+      $("flirc_step").value = d.step;
+      $("v_flirc_step").textContent = Number(d.step).toFixed(1)+" dB";
+    }
+    if(d.last_action){
+      const alter = d.last_time ? Math.max(0, Date.now()/1000 - d.last_time) : 0;
+      $("flircLast").textContent = (FLIRC_LABEL[d.last_action] || d.last_action) + (alter < 10 ? " · gerade" : "");
+    }else $("flircLast").textContent = "—";
+  }catch(e){
+    $("flircDevice").textContent = "Fehler";
+    $("flircPath").textContent = e.message;
+  }
+}
+
+$("flirc_step").addEventListener("input", e => {
+  const v = parseFloat(e.target.value);
+  $("v_flirc_step").textContent = v.toFixed(1)+" dB";
+});
+$("flirc_step").addEventListener("change", async e => {
+  try{
+    await api("/api/flirc/step",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({step:parseFloat(e.target.value)})});
+    fehler(null);
+  }catch(err){ fehler(err.message); }
+});
+reglerLive("flirc_step");
+
+/* ---- Fortschritt (Konsole) ---- */
+let progTimer = null, konsoleZeilen = 0;
+function konsoleZeile(t, txt, cls){
+  const k = $("irKonsole"); k.classList.add("on");
+  const row = document.createElement("div");
+  const ts = document.createElement("span"); ts.className = "t"; ts.textContent = (t != null ? t.toFixed(1) + "s" : "");
+  const tx = document.createElement("span"); if(cls) tx.className = cls; tx.textContent = txt;
+  row.append(ts, tx); k.append(row); k.scrollTop = k.scrollHeight;
+}
+function progZeigen(progId, phaseId, an){
+  $(progId).classList.toggle("on", an);
+  $(phaseId).classList.toggle("hidden", !an);
+  if(!an) $(progId).querySelector("i").style.width = "0";
+}
+async function progPoll(){
+  try{
+    const d = await api("/api/flirc/progress");
+    if(d.aktiv){
+      progZeigen("irProg", "irPhase", true);
+      $("irPhase").querySelector(".ph").textContent = d.phase || "…";
+      $("irPhase").querySelector(".el").textContent = d.timeout ? (d.elapsed.toFixed(0) + " / " + d.timeout + " s") : (d.elapsed.toFixed(1) + " s");
+      const w = d.timeout ? Math.min(100, d.elapsed / d.timeout * 100) : 100;
+      $("irProg").querySelector("i").style.width = w + "%";
+      for(let i = konsoleZeilen; i < d.log.length; i++){
+        const z = d.log[i]; const low = z.s.toLowerCase();
+        konsoleZeile(z.t, z.s, z.s.startsWith("$") ? "cmd" : (low.includes("succes") || low.includes("done") ? "ok" : (low.includes("error") || low.includes("zeitlimit") ? "err" : "")));
+      }
+      konsoleZeilen = d.log.length;
+    }
+    if(d.learn){
+      progZeigen("asProg", "asPhase", true);
+      $("asPhase").querySelector(".ph").textContent = d.learn.codes.length
+        ? ("Erkannt: " + d.learn.codes.join(", ") + " · Ende " + Math.max(0, 4 - (d.learn.seit_letztem||0)).toFixed(0) + " s nach letztem Druck")
+        : "Warte auf Taste…";
+      $("asPhase").querySelector(".el").textContent = d.learn.elapsed.toFixed(0) + " / 20 s";
+      $("asProg").querySelector("i").style.width = Math.min(100, d.learn.elapsed / 20 * 100) + "%";
+    }
+  }catch(e){}
+}
+function progStart(){ konsoleZeilen = 0; $("irKonsole").innerHTML = ""; if(!progTimer) progTimer = setInterval(progPoll, 300); }
+function progStop(){ if(progTimer){ clearInterval(progTimer); progTimer = null; } progZeigen("irProg","irPhase",false); progZeigen("asProg","asPhase",false); }
+
+/* ---- 1: Stick anlernen ---- */
+const slotBelegt = {};
+async function irAufnehmen(nr, zweiterDurchgang){
+  if(flircBusy) return;
+  if(!zweiterDurchgang && slotBelegt[nr]){
+    if(!confirm("Taste " + nr + " ist bereits belegt (" + slotBelegt[nr] + " Code(s)).\n\nOK = weiteren Code (Toggle) zur selben Taste hinzufügen.\nZum Ersetzen abbrechen und zuerst ✕ drücken.")) return;
+  }
+  flircBusy = true; irKnoepfe(false);
+  $("irAgainRow").classList.add("hidden");
+  irBig("irBig", "Jetzt die Fernbedienungstaste für Taste " + nr + " drücken…", "on");
+  progStart();
+  try{
+    const r = await fetch("/api/flirc/record/"+nr,{method:"POST"});
+    const d = await r.json();
+    await progPoll();
+    if(!d.ok) throw new Error(d.error || "Fehler");
+    irLetzterSlot = nr;
+    if(d.exists){
+      irBig("irBig", "Taste " + nr + ": dieser Code ist bereits gespeichert (" + (d.anzahl||0) + " Code(s)).", "ok");
+    }else{
+      irBig("irBig", "Taste " + nr + " gespeichert (" + (d.anzahl||1) + (d.anzahl===1 ? " Code" : " Codes") + ")."
+        + (zweiterDurchgang ? "" : "\nToggle-Fernbedienung? Dieselbe Taste noch einmal drücken."), "ok");
+      $("irAgainRow").classList.toggle("hidden", !!zweiterDurchgang);
+    }
+    fehler(null);
+  }catch(e){
+    irBig("irBig", "Taste " + nr + ": " + e.message, "err");
+    fehler(e.message);
+  }finally{
+    progStop(); flircBusy = false; irKnoepfe(true); flircStatus(true);
+  }
+}
+$("irAgain").onclick = () => { if(irLetzterSlot) irAufnehmen(irLetzterSlot, true); };
+$("irDone").onclick = () => { $("irAgainRow").classList.add("hidden"); irBig("irBig", "Bereit."); };
+
+async function irLoeschen(nr){
+  if(flircBusy || !confirm("Taste " + nr + " aus dem Stick löschen?")) return;
+  flircBusy = true; irKnoepfe(false);
+  $("irAgainRow").classList.add("hidden");
+  irBig("irBig", "Lösche Taste " + nr + "…", "on");
+  progStart();
+  try{
+    const r = await api("/api/flirc/delete/"+nr,{method:"POST"});
+    irBig("irBig", "Taste " + nr + ": " + (r.entfernt||0) + " Eintrag/Einträge gelöscht.", "ok");
+    fehler(null);
+  }catch(e){ irBig("irBig", e.message, "err"); fehler(e.message); }
+  finally{ progStop(); flircBusy = false; irKnoepfe(true); flircStatus(true); }
+}
+
+$("flircFormat").onclick = async () => {
+  if(flircBusy || !confirm("Wirklich ALLE Tasten im FLIRC-Stick und alle Zuweisungen löschen?")) return;
+  flircBusy = true; irKnoepfe(false);
+  irBig("irBig", "Leere Stick…", "on");
+  progStart();
+  try{
+    await api("/api/flirc/format",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({confirm:"FORMAT"})});
+    irBig("irBig", "Stick ist leer.", "ok");
+    fehler(null);
+  }catch(e){ irBig("irBig", e.message, "err"); fehler(e.message); }
+  finally{ progStop(); flircBusy = false; irKnoepfe(true); flircStatus(true); }
+};
+
+/* ---- 2: Scan ---- */
+let scanActive = false, scanTimer = null;
+const SCAN_VAL = {1:["gedrückt","down"], 2:["gehalten","hold"], 0:["losgelassen","up"]};
+function scanRender(events){
+  const log = $("scanLog"); log.innerHTML = "";
+  let letzte = null;
+  for(let i=events.length-1; i>=0; i--){
+    const e = events[i]; if(letzte === null) letzte = e;
+    const [txt, cls] = SCAN_VAL[e.value] || ["?","up"];
+    const row = document.createElement("div"); row.className = "scanrow";
+    const c = document.createElement("span"); c.className="sc";
+    c.textContent = e.label + (e.aktion ? " → "+FLIRC_LABEL[e.aktion] : "");
+    const v = document.createElement("span"); v.className="sv "+cls; v.textContent=txt;
+    const dv = document.createElement("span"); dv.className="sd"; dv.textContent=e.device||"";
+    row.append(c,v,dv); log.append(row);
+  }
+  if(letzte){
+    const [txt, cls] = SCAN_VAL[letzte.value] || ["?","up"];
+    irBig("scanBig", letzte.label + " · " + txt, cls==="hold" ? "hold" : "on");
+  }else irBig("scanBig", "Scan läuft — jetzt eine Taste drücken…", "on");
+}
+async function scanPoll(){
+  try{ const d = await api("/api/ir/scan"); if(d.active) scanRender(d.events || []); }catch(e){}
+}
+$("scanToggle").onclick = async () => {
+  const b = $("scanToggle");
+  if(!scanActive){
+    try{
+      await api("/api/ir/scan/start",{method:"POST"});
+      scanActive = true; b.textContent = "Scan stoppen"; b.classList.add("danger"); b.classList.remove("acc");
+      irBig("scanBig", "Scan läuft — jetzt eine Taste drücken…", "on");
+      if(!scanTimer) scanTimer = setInterval(scanPoll, 250);
+    }catch(e){ fehler(e.message); }
+  }else{
+    try{ await api("/api/ir/scan/stop",{method:"POST"}); }catch(e){}
+    scanActive = false; b.textContent = "Scan starten"; b.classList.add("acc"); b.classList.remove("danger");
+    if(scanTimer){ clearInterval(scanTimer); scanTimer = null; }
+    irBig("scanBig", "Scan aus");
+  }
+};
+
+/* ---- 3: Zuweisung ---- */
+document.querySelectorAll(".irAssign").forEach(b => {
+  b.onclick = async () => {
+    if(flircBusy) return;
+    const action = b.dataset.action;
+    flircBusy = true; irKnoepfe(false);
+    irBig("assignBig", "Jetzt die Taste für " + FLIRC_LABEL[action] + " 2–3 mal drücken…", "on");
+    if(!progTimer) progTimer = setInterval(progPoll, 300);
+    try{
+      const r = await api("/api/ir/learn/"+action,{method:"POST"});
+      irBig("assignBig", FLIRC_LABEL[action] + " ← " + (r.labels||[]).join(", "), "ok");
+      fehler(null);
+    }catch(e){ irBig("assignBig", FLIRC_LABEL[action] + ": " + e.message, "err"); fehler(e.message); }
+    finally{ progStop(); flircBusy = false; irKnoepfe(true); flircStatus(); }
+  };
+});
+document.querySelectorAll(".irUnassign").forEach(b => {
+  b.onclick = async () => {
+    if(flircBusy) return;
+    const action = b.dataset.action;
+    flircBusy = true; irKnoepfe(false);
+    try{
+      await api("/api/ir/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action})});
+      irBig("assignBig", FLIRC_LABEL[action] + ": Zuweisung entfernt.", "ok"); fehler(null);
+    }catch(e){ irBig("assignBig", e.message, "err"); fehler(e.message); }
+    finally{ flircBusy = false; irKnoepfe(true); flircStatus(); }
+  };
+});
+
+async function systemAktion(aktion){
+  const aus = aktion === "poweroff";
+  const frage = aus
+    ? "Raspberry Pi wirklich sauber ausschalten? Danach zum vollständigen Stromlosmachen die Versorgung trennen."
+    : "Raspberry Pi wirklich neu starten?";
+  if(!confirm(frage)) return;
+  const b = $(aus ? "poweroff" : "reboot");
+  const alt = b.textContent;
+  b.disabled = true;
+  b.textContent = aus ? "Fahre herunter…" : "Starte neu…";
+  try{
+    await api("/api/system/"+aktion,{method:"POST"});
+    fehler(null);
+  }catch(e){
+    fehler(e.message);
+    b.disabled = false;
+    b.textContent = alt;
+  }
+}
+$("reboot").onclick = () => systemAktion("reboot");
+let installTimer = null;
+async function installStatus(){
+  try{
+    const r = await fetch("/api/system/install/status"); const d = await r.json();
+    if(!d.ok) return;
+    const box = $("installLog"); box.hidden = false;
+    box.textContent = (d.log || []).join("\n") || "…";
+    box.scrollTop = box.scrollHeight;
+    if(!d.laeuft){
+      clearInterval(installTimer); installTimer = null;
+      $("installStart").disabled = false; $("installStart").textContent = "Neu installieren";
+      if(d.fertig){ box.textContent += "\n\nFertig – Seite wird neu geladen …"; setTimeout(() => window.location.reload(), 2500); }
+    }
+  }catch(e){ /* tvdsp-web startet gerade neu - weiter pollen */ }
+}
+$("installStart").onclick = async () => {
+  if(!confirm("Neu installieren?\nDSP-Profil prüfen/flashen, tv.yml, Dienste und sudo-Regeln neu setzen. Dauert einige Minuten, der Ton setzt kurz aus.")) return;
+  const b = $("installStart"); b.disabled = true; b.textContent = "Installiert …";
+  try{
+    await api("/api/system/install",{method:"POST"});
+    fehler(null);
+    if(!installTimer) installTimer = setInterval(installStatus, 2000);
+    installStatus();
+  }catch(e){ fehler(e.message); b.disabled = false; b.textContent = "Neu installieren"; }
+};
+document.querySelectorAll('[data-p="reboot"]').forEach(b => b.addEventListener("click", () => {
+  fetch("/api/system/install/status").then(r => r.json()).then(d => {
+    if(d.ok && d.laeuft){ $("installStart").disabled = true; $("installStart").textContent = "Installiert …"; if(!installTimer) installTimer = setInterval(installStatus, 2000); installStatus(); }
+  }).catch(() => {});
+}));
+$("poweroff").onclick = () => systemAktion("poweroff");
+
+/* ---------------- TV-Mitschnitt ---------------- */
+function fmtGroesse(b){
+  if(!b) return "0 MB";
+  const mb = b/1048576;
+  return mb < 1 ? (b/1024).toFixed(0)+" kB" : mb.toFixed(1)+" MB";
+}
+function fmtDauer(s){
+  s = Math.round(s);
+  const m = Math.floor(s/60), r = s%60;
+  return m+":"+String(r).padStart(2,"0");
+}
+if($("rec_br")){
+  const updBr = () => {
+    const kbps = Number($("rec_br").value);
+    $("v_rec_br").textContent = kbps + " kbps";
+    // ungefähre Dateigröße: kbps/8 = kB/s; *60 = kB/min
+    const mbMin = (kbps/8*60)/1024;
+    $("rec_groesse").textContent =
+      "≈ " + mbMin.toFixed(1).replace(".",",") + " MB/min · 40 min ≈ "
+      + Math.round(mbMin*40) + " MB";
+  };
+  $("rec_br").addEventListener("input", updBr);
+  updBr();
+}
+let recTimer = null;
+async function recStatus(){
+  try{
+    const d = await (await fetch("/api/aufnahme/status")).json();
+    const st = $("recStat");
+    if(d.laeuft){
+      st.className = "recstat on";
+      let txt = "● Aufnahme läuft  "+fmtDauer(d.dauer)+"  ·  "+fmtGroesse(d.groesse);
+      if(d.max_sek){
+        const rest = d.max_sek - d.dauer;
+        if(rest > 0 && rest < 600) txt += "  ·  auto-Stopp in "+fmtDauer(rest);
+      }
+      st.textContent = txt;
+      $("recStart").disabled = true;
+      $("recStop").disabled = false;
+    }else{
+      st.className = "recstat";
+      st.textContent = "Bereit.";
+      $("recStart").disabled = false;
+      $("recStop").disabled = true;
+    }
+    // Liste
+    const wrap = $("recList");
+    wrap.innerHTML = "";
+    if(d.ordner && $("recOrdner")){
+      $("recOrdner").textContent = "Gespeichert in: " + d.ordner;
+    }
+    (d.dateien||[]).forEach(f => {
+      const row = document.createElement("div");
+      row.className = "recitem";
+      const nm = document.createElement("span");
+      nm.className = "rn"; nm.textContent = f.name;
+      const sz = document.createElement("span");
+      sz.className = "rsz"; sz.textContent = fmtGroesse(f.groesse);
+      const dl = document.createElement("a");
+      dl.href = "/api/aufnahme/download/"+encodeURIComponent(f.name);
+      dl.textContent = "Laden"; dl.setAttribute("download","");
+      const del = document.createElement("button");
+      del.textContent = "Löschen";
+      del.onclick = async () => {
+        if(!confirm(f.name+" löschen?")) return;
+        await fetch("/api/aufnahme/delete/"+encodeURIComponent(f.name), {method:"POST"});
+        recStatus();
+      };
+      row.append(nm, sz, dl, del);
+      wrap.append(row);
+    });
+  }catch(e){ /* still */ }
+}
+$("recStart").onclick = async () => {
+  const body = JSON.stringify({ bitrate: Number($("rec_br").value) });
+  const r = await (await fetch("/api/aufnahme/start",
+    {method:"POST", headers:{"Content-Type":"application/json"}, body})).json();
+  if(!r.ok){ fehler(r.error || "Start fehlgeschlagen"); return; }
+  recStatus();
+  if(!recTimer) recTimer = setInterval(recStatus, 1000);
+};
+$("recStop").onclick = async () => {
+  const r = await (await fetch("/api/aufnahme/stop", {method:"POST"})).json();
+  if(!r.ok){ fehler(r.error || "Stopp fehlgeschlagen"); }
+  recStatus();
+};
+// Beim Öffnen des Records-Tabs Status/Liste laden; Timer nur bei Bedarf.
+document.querySelectorAll('[data-p="records"]').forEach(b =>
+  b.addEventListener("click", () => {
+    recStatus();
+    if(!recTimer) recTimer = setInterval(recStatus, 1000);
+  }));
+
+function zeigeDiagnose(d){
+  const box = $("diag");
+  // Verbindungs-/Konfigurationsdiagnose hat immer Vorrang.
+  if(d && d.bereit === false && d.diagnose){
+    box.className = "diag";
+    $("diagT").textContent = d.diagnose;
+    $("diagS").textContent = d.hinweis || "";
+    box.classList.remove("hidden");
+    return true;
+  }
+  // DSP-Profil fremd: Pegel da, Analogausgang stumm - klarer Hinweis mit Weg.
+  const dp = d && d.dsp_profil;
+  if(dp && dp.ok === false){
+    box.className = "diag";
+    $("diagT").textContent = "DSP-Profil fremd – Analogausgang bleibt stumm";
+    $("diagS").textContent = "Auf dem DSP-Chip liegt " + (dp.meldung || "ein fremdes Profil") + ", erwartet wird dspdac-noautomute. Beheben: Reiter Reboot → „Neu installieren“ (flasht das Profil und setzt 4547 = 0).";
+    $("diagC").textContent = "sudo /opt/tvdsp/venv/bin/dsptoolkit install-profile /opt/tvdsp/dsp/dspdac-noautomute.xml";
+    $("diagC").classList.remove("hidden");
+    box.classList.remove("hidden");
+    return true;
+  }
+  // Sonst: Pegel-/Clipping-Hinweis im selben Meldeblock.
+  const h = d && d.pegel_hinweis;
+  if(h && h.art){
+    box.className = "diag " + (h.art === "clip" ? "clip" : "pegel");
+    $("diagT").textContent = h.titel || "";
+    $("diagS").textContent = h.text || "";
+    $("diagC").classList.add("hidden");
+    box.classList.remove("hidden");
+    return true;
+  }
+  box.className = "diag hidden";
+  return false;
+}
+function zeigeAusfall(){
+  $("diag").className = "diag";
+  $("diagT").textContent = "Keine Verbindung zum Gerät.";
+  $("diagS").textContent = "Läuft der Dienst? Prüfen mit:";
+  $("diagC").textContent = "systemctl status tvdsp-web camilladsp";
+  $("diagC").classList.remove("hidden");
+  $("diag").classList.remove("hidden");
+}
+
+function pct(db){
+  if(db === null || db === undefined || db < -60) return 0;
+  return Math.min(100, (db+60)/60*100);
+}
+function bar(el, db){
+  const e = $(el);
+  e.style.width = pct(db)+"%";
+  e.className = "mfill" + (db > -2 ? " clip" : db > -8 ? " hot" : "");
+}
+// Live-Spitzenanzeige des Ausgangs mit kurzem Peak-Hold. Der OUT-Peak
+// kommt nur ~3x/s; kurze Transienten waeren sonst kaum ablesbar. Der
+// Höchstwert wird ~1,2 s gehalten und faellt danach sanft nach. Farbe:
+// grau normal, gelb ab 4 dB unter der Grenze, rot ab der Limiter-Grenze.
+let spitzeHold = { db: null, bis: 0 };
+function spitzeAnzeige(outPeak, idle, grenze){
+  const box = $("statPeak"), val = $("sPeak");
+  const lim = (typeof grenze === "number") ? grenze : -2.0;
+  const warn = lim - 4.0;
+  if(idle || outPeak === null || outPeak === undefined || outPeak < -60){
+    spitzeHold = { db: null, bis: 0 };
+    val.textContent = "\u2014"; box.className = "stat";
+    return;
+  }
+  const jetzt = Date.now();
+  if(spitzeHold.db === null || outPeak >= spitzeHold.db){
+    // Neuer Höchstwert: sofort zeigen und Hold-Fenster neu starten.
+    spitzeHold.db = outPeak; spitzeHold.bis = jetzt + 1200;
+  }else if(jetzt > spitzeHold.bis){
+    // Hold abgelaufen: dem aktuellen (niedrigeren) Pegel folgen.
+    spitzeHold.db = outPeak;
+  }
+  const d = spitzeHold.db;
+  val.textContent = (d >= -0.05 ? "0.0" : d.toFixed(1));
+  box.className = "stat" + (d >= lim ? " clip" : d >= warn ? " hot" : "");
+}
+let statusIdle = false;
+async function status(){
+  try{
+    const d = await api("/api/status");
+    const m = d.messung;
+    statusIdle = !!m.idle;
+    $("diagC").classList.add("hidden");
+    zeigeDiagnose(d);
+    if(d.version){
+      const seite = document.querySelector('meta[name="version"]').content;
+      $("ver").textContent = d.version;
+      if(d.version !== seite){
+        $("ver").textContent = d.version + " ≠ " + seite;
+        $("ver").style.color = "var(--warn)";
+      }
+    }
+    $("cpu").textContent = " · CPU " + (d.cpu === null || d.cpu === undefined ? "—" : Number(d.cpu).toFixed(0)+" %");
+    bar("mIn", m.in_peak); bar("mOut", m.out_peak);
+    spitzeAnzeige(m.out_peak, m.idle, d.spitze_grenze);
+    $("sM").textContent = (m.r128_m === null || m.r128_m === undefined) ? "\u2014" : Number(m.r128_m).toFixed(1);
+    $("sS").textContent = (m.r128_s === null || m.r128_s === undefined) ? "\u2014" : Number(m.r128_s).toFixed(1);
+    $("sLra").textContent  = m.lra === null ? "\u2014" : m.lra.toFixed(1);
+    $("sInt").textContent  = m.r128_i === null ? "\u2014" : m.r128_i.toFixed(1);
+    bandLaden(d.band_settings, d.band);
+    eingangAnzeige(d.eingang);
+    // Gruen = keine Daempfung, Eingangsfarbe des Diagramms = es wird gedaempft (3.2.1)
+    $("v_hoehen").innerHTML = (d.hoehen_daempfung && d.hoehen)
+      ? "Jetzt: " + (d.hoehen.daempfung_db >= 0.1
+          ? '<b style="color:#e5644e">\u2212' + zahlDe(d.hoehen.daempfung_db, 1) + ' dB</b>'
+          : '<b style="color:#4ade9b">keine Dämpfung</b>')
+        + (d.hoehen.anteil_db === null || d.hoehen.anteil_db === undefined ? "" : " \u00b7 Höhenanteil " + zahlDe(d.hoehen.anteil_db, 1) + " dB")
+      : "";
+    $("statAgc").className = "stat" + (m.regelquelle === "band" ? " aktiv" : (m.regelquelle === "band-halten" ? " tot" : ""));
+    $("sAgc").textContent = (m.lautheit === null || m.lautheit === undefined)
+      ? "\u2014" : Number(m.lautheit).toFixed(1);
+    $("sLat").textContent = (m.latenz === null || m.latenz === undefined)
+      ? "\u2014" : m.latenz.toFixed(0) + " ms";
+    if(m.chunksize){
+      document.querySelectorAll("#chunk button").forEach(x =>
+        x.classList.toggle("on", parseInt(x.dataset.v,10) === m.chunksize));
+    }
+    const laeuft = (m.status||"").toLowerCase().includes("running");
+    if(m.idle){
+      $("dot").className = "dot idle";
+      $("conn").textContent = "Standby · 1 Hz";
+    }else{
+      $("dot").className = "dot " + (laeuft ? "on" : "off");
+      $("conn").textContent = laeuft ? m.rate + " Hz" : "kein Signal";
+    }
+    if(d.volume !== null && !inBenutzung["volume"]){
+      $("volume").value = d.volume;
+      $("v_volume").textContent = FMT.volume(d.volume);
+    }
+    // Mute kann auch ausserhalb dieser Webseite geaendert werden
+    // (insbesondere per FLIRC). Deshalb den Schalter bei jedem Poll aus
+    // dem realen CamillaDSP-Zustand nachziehen.
+    if(d.mute !== null && d.mute !== undefined){
+      $("t_mute").classList.toggle("on", !!d.mute);
+    }
+    if(d.spread && d.spread !== spread && !inBenutzung["eq"]){
+      spread = d.spread;
+      document.querySelectorAll("#spread button").forEach(b =>
+        b.classList.toggle("on", b.dataset.v === spread));
+      zeichne();
+    }
+    // EQ-Kurve live nachziehen - aber nur, wenn hier gerade NIEMAND am
+    // Graphen zieht (aktiv === null) und sich wirklich etwas geaendert
+    // hat, sonst wird unnoetig neu gezeichnet und es flackert.
+    if(Array.isArray(d.eq_gains) && d.eq_gains.length === N
+       && aktiv === null && !inBenutzung["eq"]){
+      let anders = false;
+      for(let i=0;i<N;i++){
+        if(Math.abs(Number(d.eq_gains[i]) - gains[i]) > 0.01){ anders = true; break; }
+      }
+      if(anders){ gains = d.eq_gains.map(Number); zeichne(); }
+      eqGeladen = true;
+    }
+  }catch(e){
+    statusIdle = false;
+    $("dot").className = "dot off";
+    $("conn").textContent = "getrennt";
+    spitzeAnzeige(null, false, -2.0);
+    zeigeAusfall();
+  }
+}
+
+/* ---------------- Start ---------------- */
+async function init(){
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", () => setTimeout(resize, 150));
+  if(window.ResizeObserver){
+    new ResizeObserver(() => { if(cv.clientWidth) resize(); }).observe(cv);
+  }
+  try{
+    const s = await api("/api/status");
+    spread = s.spread;
+    document.querySelectorAll("#spread button").forEach(b =>
+      b.classList.toggle("on", b.dataset.v === spread));
+    toggle("t_agc","agc_aktiv", s.agc_aktiv);
+    toggle("t_bypass","bypass", s.bypass);
+    toggle("t_hoehen","hoehen_daempfung", s.hoehen_daempfung);
+    toggle("t_mute","mute", s.mute);
+  }catch(err){ zeigeAusfall(); }
+
+  // Getrennter Versuch: die Klangkurve kommt aus dem gespeicherten Zustand.
+  try{
+    const e = await api("/api/eq");
+    if(Array.isArray(e.baender) && e.baender.length === N) BANDS = e.baender;
+    if(Array.isArray(e.gains) && e.gains.length === N){ gains = e.gains.map(Number); eqGeladen = true; }
+  }catch(err){ /* Kurve bleibt flach, Bedienung geht trotzdem - senden ist dann gesperrt */ }
+
+  flircStatus();
+  setInterval(() => {
+    if(flircBusy) return;   // waehrend Anlernen/Loeschen nicht dazwischenpollen
+    const aktiv = document.querySelector('nav button.on');
+    if(aktiv && aktiv.dataset.p === "ir") flircStatus();
+  }, 2000);
+  resize();
+  // Im laufenden Betrieb bleibt die Oberflaeche reaktionsschnell (300 ms).
+  // Im Audio-Idle genuegt 1 Hz; sonst wuerde eine offen gelassene Webseite
+  // den sparsamen Standby mit eigenen Status-WebSocket-Abfragen aushebeln.
+  const statusLoop = async () => {
+    await status();
+    setTimeout(statusLoop, statusIdle ? 1000 : 300);
+  };
+  statusLoop();
+}
+init();
+</script>
+</body>
+</html>
