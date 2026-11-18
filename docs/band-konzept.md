@@ -4,7 +4,7 @@ Dritter Normalisierungszweig neben RMS und EBU R128. Testzweig: RMS und R128
 bleiben unveraendert; der Band-Zweig hat eigene Einstellungen, einen eigenen
 Reiter und eine eigene DSP-Pipeline, die nur aktiv ist, solange `quelle=band`.
 
-## Anforderung (Nutzer)
+## Anforderung
 
 - Nur ein **Lautheitsband** vorgeben (z. B. −26…−22 LUFS). Zu laut → bis zur
   Oberkante herunter. Zu leise → bis zur Unterkante hoch. Dazwischen nichts.
@@ -158,10 +158,10 @@ etwas am Geraet laeuft.
 | v4a (wie v3, aber halten statt Mitte) | 5,2 | 78 | 50 % | 15 % |
 | **v4 (M-Gate 2,5 s, 3 dB/s, halten)** | **3,0** | 59 | 46 % | 19 % |
 
-Der Nutzer hoerte v3 als "pumpt bereits zu stark" - deckt sich mit der Metrik.
+Im Hoertest pumpte v3 bereits zu stark - deckt sich mit der Metrik.
 Zwei Verursacher: das Einpendeln (staendige Bewegung im Band) und 4 dB/s.
 
-Entscheidungen des Nutzers, jetzt Konzept:
+Entscheidungen, jetzt Konzept:
 - Im Band nichts regeln; das Band bestimmt die Dynamik.
 - Zielpunkte 10 % der Bandbreite innerhalb der Kanten.
 - Deckel +17 dB; unterhalb der Rauschsperre (Regler, Standard −40 LUFS
@@ -201,13 +201,13 @@ Absolutpegel - den kennt niemand (Verstaerker).
 
 WebRTC ist unbrauchbar. Silero waere der Weg zu "anheben nur bei Sprache" und
 zu einer sprach-gegateten Programmlautheit (Dialog-Anker).
-Es fasst den Ton nicht an; es liefert nur ein Flag. Nicht eingebaut - der
-Nutzer hatte KI wegen Rechenlast ausgeschlossen; die Messung widerspricht der
-Rechenlast, die Entscheidung bleibt seine.
+Es fasst den Ton nicht an; es liefert nur ein Flag. Zunaechst nicht
+eingebaut, weil ein neuronales Modell als zu rechenintensiv galt; die Messung
+(5,4 % eines Kerns) widerlegt das.
 
 ## Spracherkennung (1.13.0) - gebaut
 
-Nutzerentscheidung nach den Messzahlen: Silero optional im Band-Reiter.
+Entscheidung nach den Messzahlen: Silero optional im Band-Reiter.
 Sprache -> Gate 1,0 s, Deckel +20 dB, Rauschsperre ignoriert; ohne Sprache
 Gate 2,5 s, Deckel +15 dB, Rauschsperre. Eigener ffmpeg-Prozess (16 kHz Mono
 aus tvmess), onnxruntime, ~5 % eines Kerns, nur bei quelle=band. Fehlerfall
@@ -223,8 +223,8 @@ Broadcast-AGC: Attack schnell, Release langsam, Gate friert.
 
 Unser Leveler nach unten war viel zu schnell (tau 0,2 s auf Momentary) und
 bounced an den Kanten. 1.9.28 (R128) hob nach oben ohne Gate mit tau 0,55 s
-(95 % in ~1,7 s) auf Basis Short-Term + 35 % Momentary an - der Nutzer fand
-das gut; gefaehrlich war nur die Folge "leise hoch, dann laut", die heute die
+(95 % in ~1,7 s) auf Basis Short-Term + 35 % Momentary an - das klang im
+Hoertest gut; gefaehrlich war nur die Folge "leise hoch, dann laut", die heute die
 Decke faengt.
 
 Neu (Variante C+D):
@@ -235,7 +235,7 @@ Neu (Variante C+D):
   Bandes ist bewusst erlaubt.
 - Sidechain-Hochpass der Decke 120 -> 50 Hz: Bass wird wie in der K-Bewertung
   begrenzt (vorher bis 7 dB Ueberschwingen bei bassreichen Effekten). Decke
-  selbst (Mitte, 20:1, 2 ms) auf Wunsch unveraendert.
+  selbst (Mitte, 20:1, 2 ms) bewusst unveraendert.
 - Gemessen (Pink, Schwelle -30, Ratio 20): Mitten-Sidechain haelt unkorreliertes
   Stereo ~0,6 dB ueber der Schwelle, korreliertes (Dialog) 2,4 dB darunter;
   L/R-Monitor summiert kohaerent (+6 dB) - deshalb nicht umgestellt.
@@ -248,7 +248,7 @@ entscheidet.
 
 ## 2.5.0 - R128 als Option zurueck
 
-Auf Wunsch ist die 1.13.5-R128-Regelung wieder waehlbar (Klang-Reiter). Der
+Die 1.13.5-R128-Regelung ist wieder waehlbar (Klang-Reiter). Der
 Code ist ein 1:1-Port des alten R128-Asts; ein Aequivalenzlauf
 (werkzeuge/equiv.py: beide Schleifen gegen denselben Fake-CamillaDSP mit
 Fake-Uhr und geskripteten M/S-Frames) ergab ueber 46 s bit-identische Aux1-

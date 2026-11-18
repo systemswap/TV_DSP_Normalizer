@@ -200,7 +200,7 @@ EINGANG_DEFAULTS = {
 # bei Schwelle -2,4 dB. Seit 2.9.0 ist die Decke fest auf "Effekte" geeicht
 # (bis 2.8.x waehlbar: Sprache +2,4 / Mitte 0 / Effekte -0,6): breite Effekte
 # und Musik landen exakt auf Oberkante + Marge, Sprache wird ~3 dB darunter
-# begrenzt - die strengste der drei Varianten (Nutzerwunsch).
+# begrenzt - die strengste der drei Varianten (bewusst gewaehlt).
 BAND_DECKE_BEZUG_EFFEKTE = -0.6
 # CamillaDSPs Kompressor misst |x| je Sample in dB und glaettet im dB-Bereich
 # (Attack 2 ms, Release 300 ms): das liest auf TV-Material ~3,6 dB heisser als
@@ -240,7 +240,7 @@ BAND_MITTEL_SEK = 2.0       # Fenster des Aufwaerts-Bezugs (Energiemittel der M-
 # Wird es nach einer leisen Stelle lauter, nimmt die Regelung die Anhebung langsam
 # zurueck (nie unter 0 dB), statt sie bis zur Oberkante mitzuschleppen. Nur nach
 # unten, nur solange angehoben ist. RUECKBAU: auf False setzen = Verhalten bis 2.9.4.
-# 2.9.6: Anheben nach Nutzer-Idee: Gain = (Unterkante + Einzug) - Mittel der
+# 2.9.6: Anheben nach dem 1-s-Mittel: Gain = (Unterkante + Einzug) - Mittel der
 # letzten 1 s, nur >= 0, mit 1,5 s nachgefuehrt (sofort = 0,1 s pumpte offline:
 # 5,6 Atmer/min). Gilt in beide Richtungen, solange nicht abgesenkt ist.
 # RUECKBAU ueber den Modus:
@@ -2607,8 +2607,8 @@ def verbinder():
 # - Der Listener gibt den Stick waehrend des Programmierens frei
 #   (FLIRC_LEARN_FILE), damit ein "button exists"-Tastendruck nicht als
 #   Lautstaerkeaktion durchlaeuft.
-# - NIE automatisch loeschen. delete_index/format nur auf ausdruecklichen
-#   Nutzerwunsch (1.9.19 hatte so den Stick geleert).
+# - NIE automatisch loeschen. delete_index/format nur nach ausdruecklicher
+#   Bestaetigung in der Oberflaeche (1.9.19 hatte so den Stick geleert).
 
 # Slots im Stick: Jede Fernbedienungstaste wird als generische Tastaturtaste
 # (a..l) programmiert. Der Scan zeigt, welcher Slot ankommt; die Zuweisung
@@ -3033,7 +3033,7 @@ def api_status():
         # den Pegel verstellt hat. Seit 2.7.0 ist das der Aux2-Fader.
         # ... aber NUR im normalen Betrieb, also wenn Main bereits auf 0 dB
         # freigegeben ist. Nach einem CamillaDSP-Neustart steht Aux2 auf dem
-        # sicheren Dienst-Startwert (-35 dB); den als Nutzerwunsch zu
+        # sicheren Dienst-Startwert (-35 dB); den als eingestellten Pegel zu
         # uebernehmen wuerde den gespeicherten Pegel loeschen (2.8.1).
         try:
             main_jetzt = cdsp.volume.main_volume()
@@ -3726,7 +3726,7 @@ def api_ir_clear():
 
 
 def mute_aufheben(grund):
-    """Stumm aus, wenn die Lautstaerke veraendert wird (3.3.7, Nutzerwunsch):
+    """Stumm aus, wenn die Lautstaerke veraendert wird (3.3.7):
     sonst wundert man sich, warum es bei Lauter nicht lauter wird."""
     try:
         if cdsp.volume.main_mute():
