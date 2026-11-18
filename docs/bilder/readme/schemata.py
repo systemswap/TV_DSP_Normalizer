@@ -6,6 +6,13 @@
 Erzeugt prozessfluss.svg (Weg des Tons vom Fernseher bis zu den Lautsprechern),
 aufbau.svg (Verkabelung der Bauteile) und downmix.svg (5.1 auf Stereo) neben diesem Skript. Alle Bauteile
 sind selbst gezeichnet; Farben wie banner.svg.
+
+Die Startseite zeigt PNG-Fassungen in doppelter Aufloesung (GitHub staucht SVGs
+auf die Spaltenbreite, ein Klick auf das PNG oeffnet es in voller Groesse). Neu
+erzeugen, z. B. mit Firefox im Hintergrundmodus und einem leeren Testprofil:
+SVG-Kopie mit doppelten width/height (viewBox bleibt), dann
+    firefox --headless --no-remote --profile <testprofil> --window-size=<2b>,<2h> \
+            --screenshot <name>.png file://<kopie>.svg
 """
 import os
 

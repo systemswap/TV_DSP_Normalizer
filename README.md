@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/bilder/readme/banner.svg" width="100%" alt="TV_DSP_Normalizer – Nie wieder Fernbedienung in der Hand. Flüstern verständlich, Explosionen gebändigt, Werbung leiser – automatisch und in Echtzeit. Raspberry Pi 4, HiFiBerry DAC+ DSP, CamillaDSP, Weboberfläche fürs Handy.">
+  <a href="docs/bilder/readme/banner.png?raw=true"><img src="docs/bilder/readme/banner.png" width="100%" alt="TV_DSP_Normalizer – Nie wieder Fernbedienung in der Hand. Flüstern verständlich, Explosionen gebändigt, Werbung leiser – automatisch und in Echtzeit. Raspberry Pi 4, HiFiBerry DAC+ DSP, CamillaDSP, Weboberfläche fürs Handy."></a>
 </p>
 
 <p align="center">
@@ -49,8 +49,10 @@ TV_DSP_Normalizer macht damit Schluss:
   klarere Stimmen.
 
 <p align="center">
-  <img src="docs/bilder/readme/vorher-nachher.svg" width="100%" alt="Oben der Lautheitsverlauf vom Fernseher mit Flüstern bei −40 LUFS und Explosionen bei −10 LUFS, unten derselbe Verlauf nach TV_DSP_Normalizer: alles liegt im Band zwischen −30 und −26 LUFS.">
+  <a href="docs/bilder/readme/vorher-nachher.png?raw=true"><img src="docs/bilder/readme/vorher-nachher.png" width="100%" alt="Oben der Lautheitsverlauf vom Fernseher mit Flüstern bei −40 LUFS und Explosionen bei −10 LUFS, unten derselbe Verlauf nach TV_DSP_Normalizer: alles liegt im Band zwischen −30 und −26 LUFS."></a>
 </p>
+
+<p align="center"><sub>Alle Bilder in doppelter Auflösung – zum Vergrößern anklicken.</sub></p>
 
 ---
 
@@ -70,7 +72,7 @@ TV_DSP_Normalizer macht damit Schluss:
 ### So fließt der Ton
 
 <p align="center">
-  <img src="docs/bilder/readme/prozessfluss.svg" width="100%" alt="Prozessfluss: Der Fernseher liefert auf dem Standardweg PCM 2.0 über Toslink an die HiFiBerry DAC+ DSP. Optional liefert er über den miniDSP MCHStreamer PCM 2.0, Dolby Digital 2.0, Dolby Digital 5.1 oder DTS. Die Box erkennt das Format, gibt 2.0 unverändert weiter und mischt 5.1 frei einstellbar auf Stereo. Beide Wege laufen als Stereo in dieselbe Kette im Raspberry Pi: Leveler, 16-Band-EQ, Loudness-Kompensation, Decke mit 30 ms Vorlauf, Höhendämpfung, Pegel, Limiter. Ausgang ist immer Stereo L/R über Cinch. Bedient wird über Handy und TV-Fernbedienung.">
+  <a href="docs/bilder/readme/prozessfluss.png?raw=true"><img src="docs/bilder/readme/prozessfluss.png" width="100%" alt="Prozessfluss: Der Fernseher liefert auf dem Standardweg PCM 2.0 über Toslink an die HiFiBerry DAC+ DSP. Optional liefert er über den miniDSP MCHStreamer PCM 2.0, Dolby Digital 2.0, Dolby Digital 5.1 oder DTS. Die Box erkennt das Format, gibt 2.0 unverändert weiter und mischt 5.1 frei einstellbar auf Stereo. Beide Wege laufen als Stereo in dieselbe Kette im Raspberry Pi: Leveler, 16-Band-EQ, Loudness-Kompensation, Decke mit 30 ms Vorlauf, Höhendämpfung, Pegel, Limiter. Ausgang ist immer Stereo L/R über Cinch. Bedient wird über Handy und TV-Fernbedienung."></a>
 </p>
 
 **Was Sie sehen:** Links steht der Fernseher mit seinen zwei möglichen Einstellungen. Auf dem
@@ -142,7 +144,7 @@ Ohne Zusatzgerät gibt der Fernseher Stereo (PCM) aus und mischt 5.1 selbst heru
 #### Warum ein eigener Downmix Dialoge so viel verständlicher macht
 
 <p align="center">
-  <img src="docs/bilder/readme/downmix.svg" width="100%" alt="Vergleich zweier Downmixe von 5.1 auf Stereo. Links der übliche Fernseh-Downmix „Neutral“: Front je 41,4 %, Center 29,3 %, Surround 29,3 %, Tiefton aus – Stimme und Raumklang gleich laut. Rechts die Voreinstellung „Sprache“: Center 50 %, Front 20 %, Tiefton 15 %, Surround 15 % – die Stimme liegt 10,5 dB über dem Raumklang. Danach läuft das Stereo durch die Band-Regelung.">
+  <a href="docs/bilder/readme/downmix.png?raw=true"><img src="docs/bilder/readme/downmix.png" width="100%" alt="Vergleich zweier Downmixe von 5.1 auf Stereo. Links der übliche Fernseh-Downmix „Neutral“: Front je 41,4 %, Center 29,3 %, Surround 29,3 %, Tiefton aus – Stimme und Raumklang gleich laut. Rechts die Voreinstellung „Sprache“: Center 50 %, Front 20 %, Tiefton 15 %, Surround 15 % – die Stimme liegt 10,5 dB über dem Raumklang. Danach läuft das Stereo durch die Band-Regelung."></a>
 </p>
 
 In einer 5.1-Mischung hat jeder Kanal seine Aufgabe. Die **Stimmen** liegen in fast allen Filmen und
@@ -207,7 +209,7 @@ Surround und Subwoofer-Kanal im Stereoton landen. Ohne ihn übernimmt das der Fe
 ## Aufbau und Installation
 
 <p align="center">
-  <img src="docs/bilder/readme/aufbau.svg" width="100%" alt="Aufbauplan: Toslink vom optischen Ausgang des Fernsehers zur HiFiBerry DAC+ DSP auf dem Raspberry Pi 4, Cinch L/R zu den Aktivboxen, USB-C-Netzteil. Optional FLIRC-Empfänger am USB-Port für die TV-Fernbedienung und miniDSP MCHStreamer per USB, an den dann das Toslink-Kabel statt an die HiFiBerry kommt. Bedienung per Handy über WLAN.">
+  <a href="docs/bilder/readme/aufbau.png?raw=true"><img src="docs/bilder/readme/aufbau.png" width="100%" alt="Aufbauplan: Toslink vom optischen Ausgang des Fernsehers zur HiFiBerry DAC+ DSP auf dem Raspberry Pi 4, Cinch L/R zu den Aktivboxen, USB-C-Netzteil. Optional FLIRC-Empfänger am USB-Port für die TV-Fernbedienung und miniDSP MCHStreamer per USB, an den dann das Toslink-Kabel statt an die HiFiBerry kommt. Bedienung per Handy über WLAN."></a>
 </p>
 
 <sub>Bauteile schematisch gezeichnet.</sub>
