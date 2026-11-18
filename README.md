@@ -133,13 +133,48 @@ Ohne Zusatzgerät gibt der Fernseher Stereo (PCM) aus und mischt 5.1 selbst heru
 **Mit dem miniDSP MCHStreamer** am USB-Port bekommt die Box den Dolby-Datenstrom direkt:
 
 - Sie erkennt laufend PCM-Stereo oder Dolby Digital, auch beim Umschalten mitten im Programm.
-- Sie decodiert 5.1 auf dem Pi und mischt nach dem Reiter **Mix**: Front, Center, LFE und Surround
-  getrennt einstellbar. Voreinstellungen sind **Kino**, **Neutral** und **Sprache** (Center bekommt die
-  Hälfte, Stimmen werden deutlich).
+- Sie decodiert 5.1 auf dem Pi und mischt es nach Ihren Vorgaben auf Stereo (unten mehr dazu).
 - Die Normalisierung wirkt **nach** dem Mix, also auf genau das, was Sie hören.
 - Beschädigte Dolby-Pakete werden per Prüfsumme erkannt und durch 32 ms Stille mit Blende ersetzt,
   nie durch Rauschen.
 - Fehlt der Empfänger, schaltet die Box von selbst auf den HiFiBerry-Eingang zurück. Stumm wird sie nie.
+
+#### Warum ein eigener Downmix Dialoge so viel verständlicher macht
+
+In einer 5.1-Mischung hat jeder Kanal seine Aufgabe. Die **Stimmen** liegen in fast allen Filmen und
+Serien im **Center**. **Musik, Effekte und Atmosphäre** verteilen sich auf Front links/rechts, die
+beiden **Surround**-Kanäle und den Tieftonkanal (**LFE**). Mischt der Fernseher das auf Stereo
+herunter, tut er es nach einem festen Schema. Die Stimme landet dabei genauso laut im Ton wie der
+Raumklang aus den hinteren Kanälen und muss sich gegen Musik und Effekte durchsetzen.
+
+Im Reiter **Mix** bestimmen Sie diese Anteile selbst. Geben Sie dem **Center mehr Gewicht**, ist die
+Stimme schon **hervorgehoben, bevor die Regelung überhaupt eingreift**. Surround, Effekte und Musik
+sind bereits zurückgenommen. Das hat drei Vorteile:
+
+- **Verständlich auch bei leiser Lautstärke:** Die Stimme liegt deutlich über dem Hintergrund statt
+  darin. Sie müssen nicht lauter drehen, um Dialoge zu verstehen.
+- **Die Regelung richtet sich nach der Sprache:** Weil die Stimme jetzt den größten Anteil am Ton
+  hat, hält das Lautheitsband vor allem die Dialoge auf gleichmäßiger Lautstärke. Effekte laufen
+  leiser mit, statt den Pegel zu bestimmen.
+- **Weniger Arbeit für die Decke:** Explosionen und Musik kommen großteils aus Surround, LFE und den
+  Frontkanälen. Sind sie schon im Mix zurückgenommen, muss die Decke seltener und weniger hart
+  eingreifen. Das klingt natürlicher, denn nichts wird hörbar „gedrückt“.
+
+Anders als ein „Dialogverstärker“, der Sprache über die Klangfarbe erraten muss, trennt der Downmix
+sauber nach Kanälen. Musik und Effekte behalten ihren Klang, sie werden nur leiser.
+
+| Voreinstellung | Front | Center | LFE | Surround | Stimme gegenüber Raumklang |
+|---|---|---|---|---|---|
+| **Neutral** (üblicher Fernseh-Downmix) | 41,4 % | 29,3 % | – | 29,3 % | gleich laut (0 dB) |
+| **Kino** (Standard) | 25,8 % | 32,3 % | 27,4 % | 14,5 % | +7 dB, mit vollem Bass |
+| **Sprache** | 20 % | 50 % | 15 % | 15 % | +10,5 dB, Stimmen klar im Vordergrund |
+
+Jede Stereoseite bekommt Front, Center, LFE und Surround in diesen Anteilen. Die vier Anteile ergeben
+immer zusammen 100 %, deshalb kann der Mix nicht übersteuern. Schieben Sie einen Regler, teilen
+sich die anderen den Rest im bisherigen Verhältnis. Sie können also ganz einfach von einer
+Voreinstellung ausgehen und nach Gehör nachjustieren. Bei Stereo-Sendungen gibt es keinen
+getrennten Center, dort ist der Mixer aus. Die Band-Regelung und die optionale Spracherkennung
+helfen dann wie gewohnt.
 
 ---
 
